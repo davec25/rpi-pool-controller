@@ -1,0 +1,19 @@
+{
+  "onboardingConfig": {
+    "deviceOnboardingId": "Pool_Controll",
+    "mnId": "0A4b",
+    "setupId": "001",
+    "vid": "ST_255a6219-9cf1-47bb-89f9-7a26aa86c941",
+    "deviceTypeId": "Others",
+    "ownershipValidationTypes": [
+      "QR"
+    ],
+    "identityType": "ED25519",
+    "deviceIntegrationProfileKey": {
+      "id": "803dab36-1405-48ac-8fc8-b6fd6f0ebd61",
+      "majorVersion": 0,
+      "minorVersion": 1
+    },
+    "productId": "60b679ec-81ff-4300-8209-05cbd5e7659f"
+  }
+}

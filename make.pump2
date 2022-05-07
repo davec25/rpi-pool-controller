@@ -1,0 +1,18 @@
+
+CC = g++
+RM = rm -rf
+#CFLAGS = -std=c99 
+SRCS = pump2.c 
+OBJS = $(patsubst %.c,%.o,$(notdir ${SRCS}))
+
+TARGET = pump2
+LD_CMD = ld
+
+.PHONY: all clean
+all: $(TARGET)
+
+clean:
+	$(RM) $(TARGET) $(OBJS)
+
+$(TARGET): $(OBJS)
+	$(CC) -o $(TARGET) $(OBJS) $(LIB_DIR) $(INC) $(LIBS)

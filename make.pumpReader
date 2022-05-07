@@ -1,0 +1,18 @@
+
+CC = g++
+RM = rm -rf
+#CFLAGS = -std=c99 
+SRCS = pumpReader.c DEV_Config.c  dev_hardware_UART.c  sysfs_gpio.c
+OBJS = $(patsubst %.c,%.o,$(notdir ${SRCS}))
+
+TARGET = pumpReader
+LD_CMD = ld
+
+.PHONY: all clean
+all: $(TARGET)
+
+clean:
+	$(RM) $(TARGET) $(OBJS)
+
+$(TARGET): $(OBJS)
+	$(CC) -o $(TARGET) $(OBJS) $(LIB_DIR) $(INC) $(LIBS)
