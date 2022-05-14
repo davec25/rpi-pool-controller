@@ -1,0 +1,19 @@
+[Unit]
+Description=Pool Controller
+Wants=network.target
+After=syslog.target network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/local/run/pool/
+ExecStart=/usr/local/bin/poolController
+Restart=always
+RestartSec=10
+User=pi
+Group=pi
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=autodeploy
+
+[Install]
+WantedBy=multi-user.target
