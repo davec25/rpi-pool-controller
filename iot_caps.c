@@ -29,6 +29,8 @@
 #include <time.h>
 #include <signal.h>
 #include <errno.h>
+#include <pthread.h>
+
 
 
 #include "st_dev.h"
@@ -62,8 +64,6 @@ const char setNotReady[] = "notReady";
 char *isJacuzziReady = (char *)setNotReady;
 
 int relayDevice;
-
-pid_t gettid(void);
 
 struct t_eventData{
     int myData;
@@ -535,7 +535,7 @@ static void cap_switch_cmd_cb_v3(struct caps_switch_data *caps_data)
 void poll_sensors(union sigval timer_data)
 {
     struct t_eventData *data = timer_data.sival_ptr;
-    printf("Timer fired %d - thread-id: %d\n", ++data->myData, gettid());
+    printf("Timer fired %d - thread-id: %d\n", ++data->myData, pthread_self());
 
     if (tempWater && tempWater->handle) {
 	double valC, valF;
@@ -622,7 +622,7 @@ int init_polling_thread()
                                 .it_interval.tv_sec  = 30,
                                 .it_interval.tv_nsec = 0
                             };
-    printf("Simple Threading Timer - thread-id: %d\n", gettid());
+    printf("Simple Threading Timer - thread-id: %d\n", pthread_self());
 
     sev.sigev_notify = SIGEV_THREAD;
     sev.sigev_notify_function = &poll_sensors;
