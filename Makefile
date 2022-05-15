@@ -26,5 +26,12 @@ $(TARGET): $(OBJS)
 	$(CC) -o $(TARGET) $(SRCS) $(OBJS) $(LIB_DIR) $(INC) $(LIBS)
 
 install: $(TARGET)
+	sudo systemctl stop pool 2>/dev/null || true
 	sudo cp $(TARGET) /usr/local/bin/
+	sudo mkdir -r /var/local/run/pool/
+	sudo chown pi:pi /var/local/run/pool
+	sudp cp softapstart softapstop /var/loca/run/pool/
+	sudo cp pool.service /etc/systemd/system/
+	sudo systemctl enable pool 
+	sudo systemctl start pool 
 

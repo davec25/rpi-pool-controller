@@ -57,35 +57,6 @@ void event_loop()
 
 int main(int argc, char **argv)
 {
-    FILE *fp;
-
-    if (!(fp = freopen("/var/local/log/pool/pool_controller.log", "a", stdout))) {
-        printf ("log file open failed\n");
-        exit (-1);
-    }
-    if (setvbuf(fp, NULL, _IOLBF, 1024)) {
-        printf ("setvbuf failed\n");
-        exit (-1);
-    }
-
-    if (!(fp = freopen("/var/local/log/pool/pool_controller.err", "a", stderr))) {
-        printf ("err file open failed\n");
-        exit (-1);
-    }
-    if (setvbuf(fp, NULL, _IOLBF, 1024)) {
-        printf ("setvbuf failed\n");
-        exit (-1);
-    }
-
-#ifdef NOT
-    // make thyself a daemon
-    pid_t cpid = fork();
-    if (cpid == -1){perror("fork");exit(1);}
-    if (cpid > 0){exit(0);}
-
-    setpgid(getpid(), 0);
-#endif
-
     /**
 	  SmartThings Device SDK(STDK) aims to make it easier to develop IoT devices by providing
 	  additional st_iot_core layer to the existing chip vendor SW Architecture.
