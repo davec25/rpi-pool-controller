@@ -14,4 +14,4 @@ clean:
 	$(RM) $(TARGET) $(OBJS)
 
 $(TARGET): $(OBJS)
-	$(CC) -o $(TARGET) $(CFLAGS) $(OBJS) $(LIB_DIR) $(INC) $(LIBS)
+	$(CC) -o $(TARGET) $(CFLAGS) $(OBJS) $(LIB_DIR) $(INC) $(LIBS) -lrt

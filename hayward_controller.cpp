@@ -27,9 +27,7 @@ HaywardController::HaywardController(const char *device, int baud)
         // exception
     }
 
-// REVERT timer?
-    pthread_create(&pid_t, NULL, &HaywardController::TimerThreadHelper, (void*)this);
-
+    InitTimerThread();
 }
 
 int HaywardController::InitTimerThread(void)
@@ -37,24 +35,26 @@ int HaywardController::InitTimerThread(void)
     int res = 0;
     timer_t timerId = 0;
 
-    struct t_eventData eventData = { .myData = 0 };
-
     /*  sigevent specifies behaviour on expiration  */
     struct sigevent sev = { 0 };
 
     /* specify start delay and interval
      * it_value and it_interval must not be zero */
 
-    struct itimerspec its = {   .it_value.tv_sec  = 30,
+    struct itimerspec its = { 0 };
+    its.it_value.tv_sec  = 60;
+#ifdef NOT
+    struct itimerspec its = {   .it_value.tv_sec  = 60,
                                 .it_value.tv_nsec = 0,
-                                .it_interval.tv_sec  = 30,
+                                .it_interval.tv_sec  = 0,
                                 .it_interval.tv_nsec = 0
                             };
-    std::cout << "Simple Threading Timer - thread-id: " << pthread_self();
+#endif // NOT
+    std::cout << "Timer thread - thread-id: " << pthread_self();
 
     sev.sigev_notify = SIGEV_THREAD;
-    sev.sigev_notify_function = &poll_sensors;
-    sev.sigev_value.sival_ptr = &eventData;
+    sev.sigev_notify_function = &TimerThreadHelper;
+    sev.sigev_value.sival_ptr = (void *)this;
 
     /* create timer */
     res = timer_create(CLOCK_REALTIME, &sev, &timerId);
@@ -179,15 +179,26 @@ int HaywardController::getPacket(unsigned char buf[], int max)
 }
 
             
+extern "C" void TimerThreadHelper(union sigval timer_data)
+{
+    HaywardController *hc = 
+		static_cast<HaywardController *>(timer_data.sival_ptr);
+
+    hc->TimerThread();
+}
+
 void HaywardController::TimerThread(void)
 {
     int csc, len;
 
     unsigned char buf[] = { 0x10, 0x02, 0x0C, 0x01, 0x00, 0x00, 0x00, 0x00, 0x10, 0x03 } ;
+#ifdef NOT
+    unsigned char buf[] = { 0x10, 0x02, 0x0C, 0x01, 0x00, 0x00, 0x00, 0x00, 0x10, 0x03 } ;
     if (0 == percent_speed)
         buf[5] = 0x99 & 0xFF;
     else
         buf[5] = percent_speed & 0xFF;
+#endif // NOT
     csc = 0x10 + 0x02 + 0x0C + 0x01 + buf[5];
     buf[6] = csc >> 8;
     buf[7] = csc & 0xFF;
@@ -206,7 +217,7 @@ void HaywardController::TimerThread(void)
             if (tries-- < 0) {
                 std::cerr << "going to fault state\n";
                 commState = FALSE;
-                percent_speed = -1;
+//                percent_speed = -1;
                 // change timer to 1 minute
                 return;
             }
@@ -234,5 +245,7 @@ void HaywardController::TimerThread(void)
         printf("motor at %d%% and using %x%2.2x watts\n", 
 						pData[6], pData[7], pData[8]);
     }
+
+    return;
 }
 

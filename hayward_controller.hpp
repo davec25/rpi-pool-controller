@@ -8,6 +8,9 @@
 #include <iostream>
 #include <pthread.h>
 #include <string.h>
+#include <time.h>
+
+extern "C" void TimerThreadHelper(union sigval timer_data);
 
 class HaywardController
 {
@@ -22,15 +25,15 @@ struct t_eventData { int myData; };
 
 int InitTimerThread(void);
 int SetupPort(const char *device, int baud, int parity);
-void TimerThread(void); 
-static void *TimerThreadHelper(void *context) 
-	{ return ((HaywardController *)context)->TimerThread(void); }
+//static void *TimerThreadHelper(void *context) 
+//	{ return ((HaywardController *)context)->TimerThread(); }
 int getPacket(unsigned char buf[], int max);
 
 
 public:
+void TimerThread(void); 
 HaywardController(const char *device, int baud);
-~HaywardController();
+//~HaywardController();
 
 bool CommState();
 
