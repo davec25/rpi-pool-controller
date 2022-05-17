@@ -13,7 +13,7 @@ User=pi
 Group=pi
 StandardOutput=syslog
 StandardError=syslog
-SyslogIdentifier=autodeploy
+SyslogIdentifier=rpi-pool-controller
 
 [Install]
 WantedBy=multi-user.target

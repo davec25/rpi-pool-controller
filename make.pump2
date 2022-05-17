@@ -1,9 +1,8 @@
-
-CC = g++
 RM = rm -rf
-#CFLAGS = -std=c99 
-SRCS = pump2.c 
-OBJS = $(patsubst %.c,%.o,$(notdir ${SRCS}))
+CPPFLAGS = -DPUMP_DEBUG -I.
+CC = g++ 
+SRCS = pump_controller.cpp hayward_controller.cpp
+OBJS = $(patsubst %.cpp,%.o,$(notdir ${SRCS}))
 
 TARGET = pump2
 LD_CMD = ld
@@ -15,4 +14,4 @@ clean:
 	$(RM) $(TARGET) $(OBJS)
 
 $(TARGET): $(OBJS)
-	$(CC) -o $(TARGET) $(OBJS) $(LIB_DIR) $(INC) $(LIBS)
+	$(CC) -o $(TARGET) $(CFLAGS) $(OBJS) $(LIB_DIR) $(INC) $(LIBS)
