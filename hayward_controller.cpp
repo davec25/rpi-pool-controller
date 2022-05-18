@@ -22,6 +22,8 @@ HaywardController::HaywardController(const char *device, int baud)
     commState = FALSE;
     tries = 3;
     int parity = 0;
+    len = 0;
+    packet = NULL;
 
     if (SetupPort(device, baud, parity) < 0) {
         // exception
@@ -126,7 +128,7 @@ int HaywardController::SetupPort(const char *device, int baud, int parity = 0)
     return(0);
 }
 
-int HaywardController::getPacket(unsigned char buf[], int max)
+int HaywardController::GetPacket(unsigned char buf[], int max)
 {
     enum { PREAMBLE_10, PREAMBLE_02, POSTAMBLE_10, POSTAMBLE_03 } state;
     int cnt = 0;
@@ -187,31 +189,77 @@ extern "C" void TimerThreadHelper(union sigval timer_data)
     hc->TimerThread();
 }
 
+int HaywardController::PacketPrechecks(const unsigned char *data, int len)
+{
+    if (len < 7) {
+        std::cerr << "PacketPrechecks: packet too small\n";
+        return (-1);
+    }
+
+    if (data[0] != 0x10 || data[1] != 0x02) {
+        std::cerr << "PacketPrechecks: preamble wrong\n";
+        return (-1);
+    }
+
+    if (data[len-2] != 0x10 || data[len-1] != 0x03) {
+        std::cerr << "PacketPrechecks: postamble wrong\n";
+        return (-1);
+    }
+
+    return(0);
+}
+
+int HaywardController::GenerateCSC(unsigned char *data, int len)
+{
+    if (PacketPrechecks(data, len)) return (-1);
+
+    int pos = len - 4;
+    int csc = 0;
+    while (pos--)
+        csc += data[len];
+
+    data[len-4] = csc >> 8;
+    data[len-3] = csc & 0xFF;
+
+    return(0);
+}
+
+int HaywardController::SendPacket(const unsigned char *data, int size, int interval_secs)
+{
+    if (PacketPrechecks(data, size)) return (-1);
+
+    if (packet) {
+        delete packet;
+        packet = NULL;
+    }
+
+    packet = new unsigned char(size);
+    memcpy((void *)packet, data, size);
+    len = size;
+    timer_secs = interval_secs;
+
+    GenerateCSC((unsigned char*)packet, len);
+    return(0);
+}
+
 void HaywardController::TimerThread(void)
 {
     int csc, len;
 
-    unsigned char buf[] = { 0x10, 0x02, 0x0C, 0x01, 0x00, 0x00, 0x00, 0x00, 0x10, 0x03 } ;
-#ifdef NOT
-    unsigned char buf[] = { 0x10, 0x02, 0x0C, 0x01, 0x00, 0x00, 0x00, 0x00, 0x10, 0x03 } ;
-    if (0 == percent_speed)
-        buf[5] = 0x99 & 0xFF;
-    else
-        buf[5] = percent_speed & 0xFF;
-#endif // NOT
-    csc = 0x10 + 0x02 + 0x0C + 0x01 + buf[5];
-    buf[6] = csc >> 8;
-    buf[7] = csc & 0xFF;
+//        buf[5] = percent_speed & 0xFF;
 
     unsigned char pData[100];
 
-    write (pump_fd, buf, sizeof buf);  
+    // lock
+    write (pump_fd, packet, len);  
+    // free
+
     std::cout << "command sent: ";
-    for (int i=0; i<10; i++)
-        printf("%2.2X ", buf[i]);
+    for (int i=0; i<len; i++)
+        printf("%2.2X ", packet[i]);
     std::cout << "\n\n";
 
-    if ( (len = getPacket(pData, sizeof pData)) > 0) {
+    if ( (len = GetPacket(pData, sizeof pData)) > 0) {
         if (0x03 != pData[len-1] || 0x10 != pData[len-2]) {
             std::cerr << "partial packet received\n";
             if (tries-- < 0) {
@@ -227,23 +275,25 @@ void HaywardController::TimerThread(void)
         for (int i=0; i<len; i++)
             if (i < (len-4)) csc+=pData[i];
 
-#ifdef HAYWARD_DEBUG
+#ifdef NOT
         if ( csc >> 8 != pData[len-4] || (csc & 0xFF) != pData[len-3]) {
             printf("checksum does not match [%4.4X] [%2.2X%2.2X]\n", 
 				csc, pData[len-4], pData[len-3]);
-#endif
             for (int i=0; i<len; i++)
                 printf("%2.2X ", pData[i]);
             std::cout << "\n\n";
-#ifdef HAYWARD_DEBUG
         }
-#endif
+#endif // NOT
 
         commState = TRUE;
         tries = 3;
-        int watts = pData[7]; watts = watts << 8 + pData[8];
-        printf("motor at %d%% and using %x%2.2x watts\n", 
-						pData[6], pData[7], pData[8]);
+        if (ProcessPacket((const unsigned char *)pData, len)) {
+            std::cerr << "HaywardController::TimerThread: subclass unhappy with packet\n";
+            return;
+        }
+//        int watts = pData[7]; watts = watts << 8 + pData[8];
+//        printf("motor at %d%% and using %x%2.2x watts\n", 
+//						pData[6], pData[7], pData[8]);
     }
 
     return;

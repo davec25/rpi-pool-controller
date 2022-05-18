@@ -30,5 +30,7 @@ public:
     int GetPumpPercent();
     int GetPumpRPMs();
 
+    int ProcessPacket(const unsigned char *, int);
+
 };
 #endif // PUMP_CONTROLLER_HPP

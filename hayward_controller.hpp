@@ -16,26 +16,28 @@ class HaywardController
 {
 
 private:
-pthread_t pid_t;
-bool commState;
-int tries;
-int pump_fd;
+    pthread_t pid_t;
+    bool commState;
+    int tries;
+    int pump_fd;
+    const unsigned char *packet;
+    int len;
+    int timer_secs;
 
-struct t_eventData { int myData; };
-
-int InitTimerThread(void);
-int SetupPort(const char *device, int baud, int parity);
-//static void *TimerThreadHelper(void *context) 
-//	{ return ((HaywardController *)context)->TimerThread(); }
-int getPacket(unsigned char buf[], int max);
+    int InitTimerThread(void);
+    int PacketPrechecks(const unsigned char *data, int size);
+    int SetupPort(const char *device, int baud, int parity);
+    int GetPacket(unsigned char buf[], int max);
 
 
 public:
-void TimerThread(void); 
-HaywardController(const char *device, int baud);
-//~HaywardController();
+    void TimerThread(void); 
+    HaywardController(const char *device, int baud);
 
-bool CommState();
+    int SendPacket(const unsigned char *packet, int len, int interval_secs);
+    int GenerateCSC(unsigned char *packet, int len);
+    virtual int ProcessPacket(const unsigned char *packet, int len) = 0;
 
+    bool CommState();
 };
 #endif // HAYWARD_CONTROLLER_HPP
