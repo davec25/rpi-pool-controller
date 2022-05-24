@@ -84,7 +84,8 @@ static void caps_temperatureMeasurement_attr_temperature_send(caps_temperatureMe
 
 static void caps_temperatureMeasurement_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
 {
-    caps_temperatureMeasurement_data_t *caps_data = usr_data;
+    caps_temperatureMeasurement_data_t *caps_data = 
+				(caps_temperatureMeasurement_data_t*)usr_data;
     if (caps_data && caps_data->init_usr_cb)
         caps_data->init_usr_cb(caps_data);
     caps_temperatureMeasurement_attr_temperature_send(caps_data);
@@ -94,7 +95,7 @@ caps_temperatureMeasurement_data_t *caps_temperatureMeasurement_initialize(IOT_C
 {
     caps_temperatureMeasurement_data_t *caps_data = NULL;
 
-    caps_data = malloc(sizeof(caps_temperatureMeasurement_data_t));
+    caps_data = (caps_temperatureMeasurement_data_t*)malloc(sizeof(caps_temperatureMeasurement_data_t));
     if (!caps_data) {
         printf("fail to malloc for caps_temperatureMeasurement_data\n");
         return NULL;

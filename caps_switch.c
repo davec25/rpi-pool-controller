@@ -110,7 +110,7 @@ static void caps_switch_cmd_off_cb(IOT_CAP_HANDLE *handle, iot_cap_cmd_data_t *c
 
 static void caps_switch_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
 {
-    caps_switch_data_t *caps_data = usr_data;
+    caps_switch_data_t *caps_data = (caps_switch_data_t*)usr_data;
     if (caps_data && caps_data->init_usr_cb)
         caps_data->init_usr_cb(caps_data);
     caps_switch_attr_switch_send(caps_data);
@@ -121,13 +121,13 @@ caps_switch_data_t *caps_switch_initialize(IOT_CTX *ctx, const char *component, 
     caps_switch_data_t *caps_data = NULL;
     int err;
 
-    caps_data = malloc(sizeof(caps_switch_data_t));
+    caps_data = (caps_switch_data_t*)malloc(sizeof(caps_switch_data_t));
     if (!caps_data) {
         printf("fail to malloc for caps_switch_data\n");
         return NULL;
     }
 
-    memset(caps_data, 0, sizeof(caps_switch_data_t));
+    memset((void*)caps_data, 0, sizeof(caps_switch_data_t));
 
     caps_data->init_usr_cb = init_usr_cb;
     caps_data->usr_data = usr_data;

@@ -1,10 +1,10 @@
 RM = rm -rf
-CPPFLAGS = -DPUMP_DEBUG -I.
+CPPFLAGS = -DCHGEN_DEBUG -I.
 CC = g++ 
-SRCS = pump_controller.cpp hayward_controller.cpp timer_thread.cpp
+SRCS = chgen_controller.cpp hayward_controller.cpp timer_thread.cpp
 OBJS = $(patsubst %.cpp,%.o,$(notdir ${SRCS}))
 
-TARGET = pump2
+TARGET = chgen
 LD_CMD = ld
 
 .PHONY: all clean

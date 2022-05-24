@@ -42,6 +42,8 @@
 #include "caps_temperatureMeasurement.h"
 #include "caps_voltageMeasurement.h"
 #include "caps_relativeHumidityMeasurement.h"
+#include "pump_controller.hpp"
+#include "chgen_controller.hpp"
 
 #define ENUM_HEATER 8
 #define ENUM_VALVE1 8
@@ -59,16 +61,15 @@ caps_voltageMeasurement_data_t *orp=NULL;
 caps_relativeHumidityMeasurement_data_t *relHum=NULL;
 IOT_CAP_HANDLE jacuzziState=NULL;
 IOT_CAP_HANDLE pH=NULL;
+IOT_CAP_HANDLE mainHealth=NULL;
 const char setReady[] = "Ready";
 const char setNotReady[] = "notReady";
 char *isJacuzziReady = (char *)setNotReady;
 
 int relayDevice;
 
-struct t_eventData{
-    int myData;
-};
-
+PumpController *pc;
+ChGenController *gc;
 
 int getTemp(double *valF, double *valC, char *file)
 {
@@ -148,7 +149,7 @@ double SensorAS(int addr)
         if (1 == buffer[0])
         {
             float val = -1.0;
-            sscanf(&buffer[1], "%f", &val);
+            sscanf((const char *)&buffer[1], "%f", &val);
             close(file_i2c);
             return(val);
         }
@@ -185,18 +186,36 @@ void cap_pH_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
         printf("fail to send pH value\n");
 }
 
+void cap_main_health_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
+{
+    int32_t sequence_no = 1;
+    bool pumpOn = (pc->GetPumpPercent() > 0);
+
+    /* Send attribute */
+    if (pumpOn) {
+        ST_CAP_SEND_ATTR_STRING(handle, "healthStatus", 
+				(char *)"online", NULL, NULL, sequence_no);
+    } else {
+        ST_CAP_SEND_ATTR_STRING(handle, "healthStatus", 
+				(char *)"offline", NULL, NULL, sequence_no);
+    }
+
+    if (sequence_no < 0)
+        printf("fail to send main health status\n");
+}
+
 void SetJacuzziNotReady() 
 {
     int32_t sequence_no = 1;
     isJacuzziReady = (char *)setNotReady;
-    ST_CAP_SEND_ATTR_STRING(jacuzziState, "isReady", isJacuzziReady, NULL, NULL, sequence_no);
+    ST_CAP_SEND_ATTR_STRING(&jacuzziState, "isReady", isJacuzziReady, NULL, NULL, sequence_no);
 }
 
 void SetJacuzziReady() 
 {
     int32_t sequence_no = 1;
     isJacuzziReady = (char *)setReady;
-    ST_CAP_SEND_ATTR_STRING(jacuzziState, "isReady", isJacuzziReady, NULL, NULL, sequence_no);
+    ST_CAP_SEND_ATTR_STRING(&jacuzziState, "isReady", isJacuzziReady, NULL, NULL, sequence_no);
 }
 
 
@@ -209,19 +228,6 @@ void cap_JS_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
         printf("fail to send Jacuzzi:isReady state\n");
 }
 
-#ifdef NOT
-void cap_voltage_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
-{
-    int32_t sequence_no = 1;
-    double v=getORP();
-
-    /* Send initial voltage attribute */
-    ST_CAP_SEND_ATTR_NUMBER(handle, "voltage", v, NULL, NULL, sequence_no);
-
-    if (sequence_no < 0)
-        printf("fail to send voltage value\n");
-}
-#endif
 
 void cap_temp_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
 {
@@ -240,7 +246,8 @@ void cap_CGswitch_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
     int32_t sequence_no = 1;
 
     /* Send initial switch attribute */
-    ST_CAP_SEND_ATTR_STRING(handle, "switch", "on", NULL, NULL, sequence_no);
+    ST_CAP_SEND_ATTR_STRING(handle, "switch", 
+					(char *)"on", NULL, NULL, sequence_no)
 
     if (sequence_no < 0)
         printf("fail to send CGswitch value\n");
@@ -251,7 +258,8 @@ void cap_CGflow_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
     int32_t sequence_no = 1;
 
     /* Send initial switch attribute */
-    ST_CAP_SEND_ATTR_STRING(handle, "water", "dry", NULL, NULL, sequence_no);
+    ST_CAP_SEND_ATTR_STRING(handle, "water", 
+				(char *)"dry", NULL, NULL, sequence_no)
 
     if (sequence_no < 0)
         printf("fail to send CGflow value\n");
@@ -262,7 +270,8 @@ void cap_Hswitch_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
     int32_t sequence_no = 1;
 
     /* Send initial switch attribute */
-    ST_CAP_SEND_ATTR_STRING(handle, "switch", "on", NULL, NULL, sequence_no);
+    ST_CAP_SEND_ATTR_STRING(handle, "switch", 
+					(char *)"on", NULL, NULL, sequence_no)
 
     if (sequence_no < 0)
         printf("fail to send Hswitch value\n");
@@ -402,10 +411,13 @@ void cap_Bswitch_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
     }
 
     /* Send initial switch attribute */
-    if (val) 
-        ST_CAP_SEND_ATTR_STRING(handle, "switch", "on", NULL, NULL, sequence_no)
-    else
-        ST_CAP_SEND_ATTR_STRING(handle, "switch", "off", NULL, NULL, sequence_no)
+    if (val) {
+        ST_CAP_SEND_ATTR_STRING(handle, "switch", 
+				(char *)"on", NULL, NULL, sequence_no)
+    } else {
+        ST_CAP_SEND_ATTR_STRING(handle, "switch", 
+				(char *)"off", NULL, NULL, sequence_no)
+    }
 
     if (sequence_no < 0)
         printf("fail to send Bswitch value\n");
@@ -420,10 +432,13 @@ void cap_V1switch_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
     }
 
     /* Send initial switch attribute */
-    if (val)
-        ST_CAP_SEND_ATTR_STRING(handle, "switch", "on", NULL, NULL, sequence_no)
-    else
-        ST_CAP_SEND_ATTR_STRING(handle, "switch", "off", NULL, NULL, sequence_no)
+    if (val) {
+        ST_CAP_SEND_ATTR_STRING(handle, "switch", 
+					(char *)"on", NULL, NULL, sequence_no)
+    } else {
+        ST_CAP_SEND_ATTR_STRING(handle, "switch", 
+					(char *)"off", NULL, NULL, sequence_no)
+    }
 
     if (sequence_no < 0)
         printf("fail to send V1switch value\n");
@@ -438,10 +453,13 @@ void cap_V2switch_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
     }
 
     /* Send initial switch attribute */
-    if (val)
-        ST_CAP_SEND_ATTR_STRING(handle, "switch", "on", NULL, NULL, sequence_no)
-    else
-        ST_CAP_SEND_ATTR_STRING(handle, "switch", "off", NULL, NULL, sequence_no)
+    if (val) {
+        ST_CAP_SEND_ATTR_STRING(handle, "switch", 
+				(char *)"on", NULL, NULL, sequence_no)
+    } else {
+        ST_CAP_SEND_ATTR_STRING(handle, "switch", 
+				(char *)"off", NULL, NULL, sequence_no)
+    }
 
     if (sequence_no < 0)
         printf("fail to send V2switch value\n");
@@ -458,9 +476,11 @@ void cap_V3switch_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
 
     /* Send initial switch attribute */
     if (val)
-        ST_CAP_SEND_ATTR_STRING(handle, "switch", "on", NULL, NULL, sequence_no)
+        ST_CAP_SEND_ATTR_STRING(handle, "switch", 
+				(char *)"on", NULL, NULL, sequence_no)
     else
-        ST_CAP_SEND_ATTR_STRING(handle, "switch", "off", NULL, NULL, sequence_no)
+        ST_CAP_SEND_ATTR_STRING(handle, "switch", 
+				(char *)"off", NULL, NULL, sequence_no)
 
     if (sequence_no < 0)
         printf("fail to send V3switch value\n");
@@ -485,11 +505,13 @@ static void cap_switch_cmd_cb_blower(struct caps_switch_data *caps_data)
     if (0 == strcmp(caps_helper_switch.attr_switch.value_off, caps_data->switch_value)) {
         doRelayWrite(relayDevice,1,0);
         /* Update switch attribute */
-        ST_CAP_SEND_ATTR_STRING(caps_data->handle, "switch", "off", NULL, NULL, sequence_no);
+        ST_CAP_SEND_ATTR_STRING(caps_data->handle, "switch", 
+					(char *)"off", NULL, NULL, sequence_no)
     } else if (0 == strcmp(caps_helper_switch.attr_switch.value_on,caps_data->switch_value)) {
         doRelayWrite(relayDevice,1,1);
         /* Update switch attribute */
-        ST_CAP_SEND_ATTR_STRING(caps_data->handle, "switch", "on", NULL, NULL, sequence_no);
+        ST_CAP_SEND_ATTR_STRING(caps_data->handle, "switch", 
+					(char *)"on", NULL, NULL, sequence_no)
     } else {
         printf("unknown switch state %s\n", caps_data->switch_value);
     }
@@ -534,16 +556,17 @@ static void cap_switch_cmd_cb_v3(struct caps_switch_data *caps_data)
 
 void poll_sensors(union sigval timer_data)
 {
-    struct t_eventData *data = timer_data.sival_ptr;
-    printf("Timer fired %d - thread-id: %d\n", ++data->myData, pthread_self());
+    printf("Timer fired - thread-id: %d\n", pthread_self());
 
-    if (tempWater && tempWater->handle) {
+    bool pumpOn = (pc->GetPumpPercent() > 0);
+    if (tempWater && tempWater->handle && pumpOn) {
 	double valC, valF;
         int32_t sequence_no = 1;
 
         if (-1 != getWaterTemp(&valF, &valC)) {
             tempWater->set_temperature_value(tempWater, valF);
-            ST_CAP_SEND_ATTR_NUMBER(tempWater->handle, "temperature", valF, tempWater->temperature_unit, NULL, sequence_no);
+            ST_CAP_SEND_ATTR_NUMBER(tempWater->handle, "temperature", 
+			valF, tempWater->temperature_unit, NULL, sequence_no)
         }
     }
 
@@ -553,7 +576,8 @@ void poll_sensors(union sigval timer_data)
 
         if (-1 != getCaseTemp(&valF, &valC)) {
             tempCase->set_temperature_value(tempCase, valF);
-            ST_CAP_SEND_ATTR_NUMBER(tempCase->handle, "temperature", valF, tempCase->temperature_unit, NULL, sequence_no);
+            ST_CAP_SEND_ATTR_NUMBER(tempCase->handle, "temperature", 
+			valF, tempCase->temperature_unit, NULL, sequence_no)
         }
     }
 
@@ -567,7 +591,7 @@ void poll_sensors(union sigval timer_data)
         }
     }
 
-    if (orp && orp->handle) {
+    if (orp && orp->handle && pumpOn) {
 	double val=getORP();
         int32_t sequence_no = 1;
 
@@ -588,8 +612,11 @@ void poll_sensors(union sigval timer_data)
         }
     }
 
-    if (pH)
-        cap_pH_init_cb(pH, NULL);
+    if (pH && pumpOn) {
+        cap_pH_init_cb(&pH, NULL);
+    } else {
+
+    }
 
     if (!strcmp(jacuzzi->switch_value,"On")) {
         if (setTemp->heatingSetpoint_value < tempWater->temperature_value) {
@@ -609,24 +636,20 @@ int init_polling_thread()
     int res = 0;
     timer_t timerId = 0;
 
-    struct t_eventData eventData = { .myData = 0 };
-
     /*  sigevent specifies behaviour on expiration  */
     struct sigevent sev = { 0 };
 
     /* specify start delay and interval
      * it_value and it_interval must not be zero */
 
-    struct itimerspec its = {   .it_value.tv_sec  = 30,
-                                .it_value.tv_nsec = 0,
-                                .it_interval.tv_sec  = 30,
-                                .it_interval.tv_nsec = 0
-                            };
+    struct itimerspec its = { 0 } ;
+    its.it_value.tv_sec  = 30,
+
     printf("Simple Threading Timer - thread-id: %d\n", pthread_self());
 
     sev.sigev_notify = SIGEV_THREAD;
     sev.sigev_notify_function = &poll_sensors;
-    sev.sigev_value.sival_ptr = &eventData;
+    //sev.sigev_value.sival_ptr = &eventData;
 
     /* create timer */
     res = timer_create(CLOCK_REALTIME, &sev, &timerId);
@@ -648,7 +671,7 @@ int init_polling_thread()
 void iot_caps_setup(IOT_CTX ctx)
 {
     IOT_CAP_HANDLE *handle = NULL;
-    int iot_err = st_conn_set_noti_cb(ctx, iot_noti_cb, NULL);
+    int iot_err = st_conn_set_noti_cb(&ctx, iot_noti_cb, NULL);
     if (iot_err)
         printf("fail to set notification callback function\n");
 
@@ -656,7 +679,7 @@ void iot_caps_setup(IOT_CTX ctx)
     if (ERROR == iot_err)
         printf("fail to setup relay board\n");
 
-    orp = caps_voltageMeasurement_initialize(ctx, NULL, NULL, NULL);
+    orp = caps_voltageMeasurement_initialize(&ctx, NULL, NULL, NULL);
     if (orp) {
         int32_t sequence_no = 1;
         double val = getORP();
@@ -666,13 +689,14 @@ void iot_caps_setup(IOT_CTX ctx)
 			caps_helper_voltageMeasurement.attr_voltage.unit_V);
     }
 
-    pH = st_cap_handle_init(ctx, "main", "heartcircle52521.ph", cap_pH_init_cb, NULL);
+    pH = st_cap_handle_init(&ctx, "main", "heartcircle52521.ph", cap_pH_init_cb, NULL);
+//    mainHealth = st_cap_handle_init(&ctx, "main", "healthCheck", cap_main_health_init_cb, NULL);
 
-/*    handle = st_cap_handle_init(ctx, "ChlorineGenerator", "switch", cap_CGswitch_init_cb, NULL);
-    handle = st_cap_handle_init(ctx, "ChlorineGenerator", "waterSensor", cap_CGflow_init_cb, NULL);
-*/
+//    handle = st_cap_handle_init(&ctx, "ChlorineGenerator", "switch", cap_CGswitch_init_cb, NULL);
+//   handle = st_cap_handle_init(&ctx, "ChlorineGenerator", "waterSensor", cap_CGflow_init_cb, NULL);
 
-    jacuzzi = caps_switch_initialize(ctx, "Jacuzzi", NULL, NULL);
+
+    jacuzzi = caps_switch_initialize(&ctx, "Jacuzzi", NULL, NULL);
     if (jacuzzi) {
         int32_t sequence_no = 1;
         jacuzzi->cmd_on_usr_cb = cap_switch_cmd_cb_jswitch;
@@ -681,13 +705,13 @@ void iot_caps_setup(IOT_CTX ctx)
         jacuzzi->set_switch_value(jacuzzi, caps_helper_switch.attr_switch.value_off);
     }
 
-    jacuzziState = st_cap_handle_init(ctx, "Jacuzzi", "heartcircle52521.jacuzzistate", cap_JS_init_cb, NULL);
+    jacuzziState = st_cap_handle_init(&ctx, "Jacuzzi", "heartcircle52521.jacuzzistate", cap_JS_init_cb, NULL);
 
 
-/*    handle = st_cap_handle_init(ctx, "ChlorineGenerator", "switch", cap_CGswitch_init_cb, NULL);
+/*    handle = st_cap_handle_init(&ctx, "ChlorineGenerator", "switch", cap_CGswitch_init_cb, NULL);
 */
 
-    relHum = caps_relativeHumidityMeasurement_initialize(ctx, "Outside", NULL, NULL);
+    relHum = caps_relativeHumidityMeasurement_initialize(&ctx, "Outside", NULL, NULL);
     if (relHum) {
         double val = getHumidity();
         relHum->humidity_value = ( -1 != val ? val : 0);
@@ -695,7 +719,7 @@ void iot_caps_setup(IOT_CTX ctx)
 		(char *)caps_helper_relativeHumidityMeasurement.attr_humidity.unit_percent;
     }
 
-    setTemp = caps_thermostatHeatingSetpoint_initialize(ctx, "Jacuzzi", NULL, NULL);
+    setTemp = caps_thermostatHeatingSetpoint_initialize(&ctx, "Jacuzzi", NULL, NULL);
     if (setTemp) {
         int32_t sequence_no = 1;
         double val = 95.0;
@@ -705,7 +729,7 @@ void iot_caps_setup(IOT_CTX ctx)
       (char*)caps_helper_thermostatHeatingSetpoint.attr_heatingSetpoint.unit_F;
     }
 
-    tempWater = caps_temperatureMeasurement_initialize(ctx, "main", NULL, NULL);
+    tempWater = caps_temperatureMeasurement_initialize(&ctx, "main", NULL, NULL);
     if (tempWater) {
         int32_t sequence_no = 1;
         double valF = -1.0, valC = -1.0;
@@ -716,7 +740,7 @@ void iot_caps_setup(IOT_CTX ctx)
         (char*)caps_helper_temperatureMeasurement.attr_temperature.unit_F;
     } else printf("no water temp\n");
 
-    tempCase = caps_temperatureMeasurement_initialize(ctx, "Case", NULL, NULL);
+    tempCase = caps_temperatureMeasurement_initialize(&ctx, "Case", NULL, NULL);
     if (tempCase) {
         int32_t sequence_no = 1;
         double valF = -1.0, valC = -1.0;
@@ -727,7 +751,7 @@ void iot_caps_setup(IOT_CTX ctx)
         (char*)caps_helper_temperatureMeasurement.attr_temperature.unit_F;
     } else printf("no water temp\n");
 
-    tempOutside = caps_temperatureMeasurement_initialize(ctx, "Outside", NULL, NULL);
+    tempOutside = caps_temperatureMeasurement_initialize(&ctx, "Outside", NULL, NULL);
     if (tempOutside) {
         int32_t sequence_no = 1;
         double valF = -1.0, valC = -1.0;
@@ -738,7 +762,7 @@ void iot_caps_setup(IOT_CTX ctx)
         (char*)caps_helper_temperatureMeasurement.attr_temperature.unit_F;
     } else printf("no water temp\n");
 
-    blower = caps_switch_initialize(ctx, "Blower", NULL, NULL);
+    blower = caps_switch_initialize(&ctx, "Blower", NULL, NULL);
     if (blower) {
         blower->cmd_on_usr_cb = cap_switch_cmd_cb_blower;
         blower->cmd_off_usr_cb = cap_switch_cmd_cb_blower;
@@ -750,43 +774,8 @@ void iot_caps_setup(IOT_CTX ctx)
         blower->set_switch_value(blower, switch_init_value);
     }
 
-#ifdef NOT
-    v1 = caps_switch_initialize(ctx, "Valve1", NULL, NULL);
-    if (v1) {
-        v1->cmd_on_usr_cb = cap_switch_cmd_cb_v1;
-        v1->cmd_off_usr_cb = cap_switch_cmd_cb_v1;
-
-        const char *switch_init_value = caps_helper_switch.attr_switch.value_off;
-        int val = doRelayRead(relayDevice,2);
-        if (1 == val)
-            switch_init_value = caps_helper_switch.attr_switch.value_on;
-        v1->set_switch_value(v1, switch_init_value);
-    }
-
-    v2 = caps_switch_initialize(ctx, "Valve2", NULL, NULL);
-    if (v2) {
-        v2->cmd_on_usr_cb = cap_switch_cmd_cb_v2;
-        v2->cmd_off_usr_cb = cap_switch_cmd_cb_v2;
-
-        const char *switch_init_value = caps_helper_switch.attr_switch.value_off;
-        int val = doRelayRead(relayDevice,3);
-        if (1 == val)
-            switch_init_value = caps_helper_switch.attr_switch.value_on;
-        v2->set_switch_value(v2, switch_init_value);
-    }
-
-    v3 = caps_switch_initialize(ctx, "Valve3", NULL, NULL);
-    if (v3) {
-        v3->cmd_on_usr_cb = cap_switch_cmd_cb_v3;
-        v3->cmd_off_usr_cb = cap_switch_cmd_cb_v3;
-
-        const char *switch_init_value = caps_helper_switch.attr_switch.value_off;
-        int val = doRelayRead(relayDevice,4);
-        if (1 == val)
-            switch_init_value = caps_helper_switch.attr_switch.value_on;
-        v3->set_switch_value(v3, switch_init_value);
-    }
-#endif
+    pc = new PumpController();
+    gc = new ChGenController();
 
     init_polling_thread();
 }

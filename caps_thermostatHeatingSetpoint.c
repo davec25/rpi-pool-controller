@@ -110,7 +110,7 @@ caps_thermostatHeatingSetpoint_data_t *caps_thermostatHeatingSetpoint_initialize
     caps_thermostatHeatingSetpoint_data_t *caps_data = NULL;
     int err;
 
-    caps_data = malloc(sizeof(caps_thermostatHeatingSetpoint_data_t));
+    caps_data = (caps_thermostatHeatingSetpoint_data_t*)malloc(sizeof(caps_thermostatHeatingSetpoint_data_t));
     if (!caps_data) {
         printf("fail to malloc for caps_thermostatHeatingSetpoint_data\n");
         return NULL;

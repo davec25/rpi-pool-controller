@@ -5,7 +5,7 @@
  * Dave Cabot
  *
  */
-#include <hayward_controller.hpp>
+#include "hayward_controller.hpp"
 
 class PumpController : public HaywardController
 {
@@ -22,7 +22,7 @@ private:
 
 
 public:
-    PumpController(const char *device="/dev/ttyAMA0", int baud=B19200) : 
+    PumpController(const char *device="/dev/ttyS0", int baud=B19200) : 
 					HaywardController(device, baud) {};
 
     int SetPumpPercent(int);

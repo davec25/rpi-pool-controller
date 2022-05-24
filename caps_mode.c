@@ -151,7 +151,7 @@ static void caps_mode_cmd_setMode_cb(IOT_CAP_HANDLE *handle, iot_cap_cmd_data_t 
 
 static void caps_mode_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
 {
-    caps_mode_data_t *caps_data = usr_data;
+    caps_mode_data_t *caps_data = (caps_mode_data_t*)usr_data;
     if (caps_data && caps_data->init_usr_cb)
         caps_data->init_usr_cb(caps_data);
     caps_mode_attr_supportedModes_send(caps_data);
@@ -160,16 +160,16 @@ static void caps_mode_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
 
 caps_mode_data_t *caps_mode_initialize(IOT_CTX *ctx, const char *component, void *init_usr_cb, void *usr_data)
 {
-    caps_mode_data_t *caps_data = NULL;
+    caps_mode_data_t *caps_data = (caps_mode_data_t*)NULL;
     int err;
 
-    caps_data = malloc(sizeof(caps_mode_data_t));
+    caps_data = (caps_mode_data_t*)malloc(sizeof(caps_mode_data_t));
     if (!caps_data) {
         printf("fail to malloc for caps_mode_data\n");
         return NULL;
     }
 
-    memset(caps_data, 0, sizeof(caps_mode_data_t));
+    memset((void*)caps_data, 0, sizeof(caps_mode_data_t));
 
     caps_data->init_usr_cb = init_usr_cb;
     caps_data->usr_data = usr_data;

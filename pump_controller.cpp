@@ -3,11 +3,7 @@
  *
  */
 
-#include <termios.h>
-#include <unistd.h>
-
-#include <pump_controller.hpp>
-
+#include "pump_controller.hpp"
 
             
 int PumpController::SetPumpRPMs(int rpm)
@@ -47,8 +43,9 @@ int PumpController::ProcessPacket(const unsigned char *pData, int len)
     }
 
     int watts = pData[7]; watts = watts << 8 + pData[8];
-    printf("motor at %d%% and using %x%2.2x watts\n",
-                                            pData[6], pData[7], pData[8]);
+    percent_speed = pData[6];
+    printf("motor at %d%% (%d rpms) and using %x%2.2x watts\n",
+                         GetPumpPercent(), GetPumpRPMs(), pData[7], pData[8]);
     return(0);
 }
 
@@ -59,12 +56,17 @@ int main(int argc, char **argv)
 //declare
     class PumpController pc;
 
-    const unsigned char buf[] = { 0x10, 0x02, 0x0C, 0x01, 0x00, 0x99, 0x00, 0x00, 0x10, 0x03 } ;
+//        buf[5] = percent_speed & 0xFF;
 
-    if (pc.SendPacket(buf, 10, 60)) {
+    const unsigned char buf[] = { 0x10, 0x02, 0x0C, 0x01, 0x00, 0x99, 0x00, 0x00, 0x10, 0x03 } ;
+//    const unsigned char buf[] = { 0x10, 0x02, 0x0C, 0x01, 0x14, 0x00, 0x00, 0x10, 0x03 } ;
+
+    if (pc.SendPacket(buf, sizeof buf, 10)) {
         std::cerr << "SendPacket failed\n";
         exit(-1);
     }
+
+    std::cout << "class initiated\n";
 
     while(1) {
         sleep(60);

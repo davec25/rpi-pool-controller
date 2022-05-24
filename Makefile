@@ -1,12 +1,27 @@
 
-CC = gcc
+CPP = g++
 RM = rm -rf
-CFLAGS = -std=c99 
+CPPFLAGS = -fpermissive
 LIB_NAME = iotcore
 INC = -I../src/include
 LIB_DIR = -L../output
 LIBS = -l$(LIB_NAME) -lssl -lpthread -lrt -lcrypto -lm
-SRCS = main.c iot_caps.c iot.c relay.c comm.c thread.c caps_switch.c caps_temperatureMeasurement.c caps_thermostatHeatingSetpoint.c caps_voltageMeasurement.c caps_relativeHumidityMeasurement.c
+SRCS = main.c \
+	iot_caps.c \
+	iot.c \
+	relay.c \
+	comm.c \
+	thread.c \
+	caps_switch.c \
+	caps_temperatureMeasurement.c \
+	caps_thermostatHeatingSetpoint.c \
+	caps_voltageMeasurement.c \
+	caps_relativeHumidityMeasurement.c \
+	chgen_controller.cpp \
+	pump_controller.cpp \
+	hayward_controller.cpp \
+	timer_thread.cpp 
+
 JSONS = device_info.json onboarding_config.json
 OBJS = $(JSONS:%.json=%.o)
 TARGET = poolController
@@ -23,7 +38,7 @@ clean:
 	$(LD_CMD) -r -b binary -o $@ $<
 
 $(TARGET): $(OBJS)
-	$(CC) -o $(TARGET) $(SRCS) $(OBJS) $(LIB_DIR) $(INC) $(LIBS)
+	$(CPP) $(CPPFLAGS) -o $(TARGET) $(SRCS) $(OBJS) $(LIB_DIR) $(INC) $(LIBS)
 
 install: $(TARGET)
 	sudo systemctl stop pool 2>/dev/null || true
