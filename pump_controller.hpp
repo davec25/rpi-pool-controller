@@ -12,23 +12,16 @@ class PumpController : public HaywardController
 
 private:
     int percent_speed;
-
-//struct t_eventData { int myData; };
-
-//int PumpController::InitTimerThread(void);
-
-//static void *PumpThreadHelper(void *context) 
-//	{ return ((PumpController *)context)->PumpThread(void); }
-
+    int watts;
 
 public:
-    PumpController(const char *device="/dev/ttyS0", int baud=B19200) : 
-					HaywardController(device, baud) {};
+    PumpController(const char *device="/dev/ttyS0", int baud=B19200);
 
     int SetPumpPercent(int);
     int SetPumpRPMs(int);
     int GetPumpPercent();
     int GetPumpRPMs();
+    int GetPumpWatts();
 
     int ProcessPacket(const unsigned char *, int);
 

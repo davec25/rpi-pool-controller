@@ -43,7 +43,8 @@ void iot_noti_cb(iot_noti_data_t *noti_data, void *noti_usr_data)
         printf("[device deleted]\n");
     } else if (noti_data->type == IOT_NOTI_TYPE_RATE_LIMIT) {
         printf("[rate limit] Remaining time:%d, sequence number:%d\n",
-               noti_data->raw.rate_limit.remainingTime, noti_data->raw.rate_limit.sequenceNumber);
+		noti_data->raw.rate_limit.remainingTime, 
+		noti_data->raw.rate_limit.sequenceNumber);
     }
 }
 

@@ -2,7 +2,7 @@
     "name": "JacuzziState",
     "status": "live",
     "attributes": {
-        "bypassStatus": {
+        "isReady": {
             "schema": {
                 "type": "object",
                 "additionalProperties": false,
@@ -13,7 +13,6 @@
                         "enum": [
                             "ready",
                             "notReady",
-                            "bypassed"
                         ]
                     }
                 },
@@ -25,13 +24,12 @@
             "values": [
                 "ready",
                 "notReady",
-                "bypassed"
             ]
         }
     },
     "commands": {
         
     },
-    "id": "bypassable",
+    "id": "isReady",
     "version": 1
 }

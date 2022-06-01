@@ -29,7 +29,6 @@ private:
     int SetupPort(const char *device, int baud, int parity);
     int GetPacket(unsigned char buf[], int max);
 
-
 public:
     HaywardController(const char *device, int baud);
 

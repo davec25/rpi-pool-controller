@@ -220,10 +220,12 @@ void HaywardController::ThreadProcess(void)
         return;
     }
 
+#ifdef NOT
     std::cout << "command sent: ";
     for (int i=0; i<packet_len; i++)
         printf("%2.2X ", packet[i]);
     std::cout << "\n\n";
+#endif // NOT
 
     if ( (len = GetPacket(pData, sizeof pData)) == -1) {
         std::cerr << "GetPacket returned fail\n";

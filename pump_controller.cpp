@@ -5,11 +5,21 @@
 
 #include "pump_controller.hpp"
 
+PumpController::PumpController(const char *device, int baud) :
+                                        	HaywardController(device, baud)
+{
+    const unsigned char buf[] = { 0x10, 0x02, 0x0C, 0x01, 0x00, 0x99, 0x00, 0x00, 0x10, 0x03 } ;
+
+    if (SendPacket(buf, sizeof buf, 5)) {
+        std::cerr << "SendPacket failed\n";
+        exit(-1);
+    }
+}
             
 int PumpController::SetPumpRPMs(int rpm)
 {
-    int speed = 100 * 3450 / rpm;
-    SetPumpPercent(speed);
+    int percent = 100 * 3450 / rpm;
+    SetPumpPercent(percent);
     return (0);
 }
 
@@ -19,14 +29,22 @@ int PumpController::GetPumpRPMs()
     return (rpm);
 }
 
-int PumpController::SetPumpPercent(int pcnt)
+int PumpController::SetPumpPercent(int percent)
 {
-    if (pcnt > -1 && pcnt < 101) {
-        percent_speed = pcnt;
-        return (0);
+    if (percent < 0 || percent > 100) {
+        return (-1);
     }
 
-    return(-1);
+    unsigned char buf[] = { 0x10, 0x02, 0x0C, 0x01, 0x00, 0x99, 0x00, 0x00, 0x10, 0x03 } ;
+    percent_speed = percent;
+    buf[5] = percent & 0xFF;
+
+    if (SendPacket(buf, sizeof buf, 5)) {
+        std::cerr << "SendPacket failed\n";
+        return(-1);
+    }
+
+    return(0);
 }
 
 int PumpController::GetPumpPercent()
@@ -35,6 +53,11 @@ int PumpController::GetPumpPercent()
 }
 
 
+int PumpController::GetPumpWatts()
+{
+    return (watts);
+}
+
 int PumpController::ProcessPacket(const unsigned char *pData, int len)
 {
     if (len != 13) {
@@ -42,10 +65,14 @@ int PumpController::ProcessPacket(const unsigned char *pData, int len)
         return(-1);
     }
 
-    int watts = pData[7]; watts = watts << 8 + pData[8];
+    watts  = (pData[7] >> 4) * 1000;
+    watts += (pData[7] & 0xF) * 100;
+    watts += (pData[8] >> 4) * 10;
+    watts +=  pData[8] & 0xF;
+
     percent_speed = pData[6];
-    printf("motor at %d%% (%d rpms) and using %x%2.2x watts\n",
-                         GetPumpPercent(), GetPumpRPMs(), pData[7], pData[8]);
+//    printf("motor at %d%% (%d rpms) and using %x%2.2x  %d watts\n",
+//                   GetPumpPercent(), GetPumpRPMs(), pData[7], pData[8], watts);
     return(0);
 }
 
@@ -61,7 +88,7 @@ int main(int argc, char **argv)
     const unsigned char buf[] = { 0x10, 0x02, 0x0C, 0x01, 0x00, 0x99, 0x00, 0x00, 0x10, 0x03 } ;
 //    const unsigned char buf[] = { 0x10, 0x02, 0x0C, 0x01, 0x14, 0x00, 0x00, 0x10, 0x03 } ;
 
-    if (pc.SendPacket(buf, sizeof buf, 10)) {
+    if (pc.SendPacket(buf, sizeof buf, 5)) {
         std::cerr << "SendPacket failed\n";
         exit(-1);
     }

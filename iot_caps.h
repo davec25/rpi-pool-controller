@@ -23,7 +23,7 @@
 #include "st_dev.h"
 
 
-void iot_caps_setup(IOT_CTX ctx);
+void iot_caps_setup(IOT_CTX *ctx);
 
 void cap_switch_init_cb(IOT_CAP_HANDLE *handle, void *usr_data);
 

@@ -19,7 +19,7 @@ public:
     ChGenController(const char *device="/dev/ttyUSB0", int baud=B9600) : 
 					HaywardController(device, baud) {};
 
-    int SetGenPercent(int gen) { percent_gen = gen; return 0; };
+    int SetGenPercent(int gen);
     int GetGenPercent() { return percent_gen; };
     int GetPPM() { return ppm; };
     int GetStatus() { return status; };

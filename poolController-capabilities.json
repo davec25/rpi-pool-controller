@@ -1,0 +1,409 @@
+{
+  "mnmn": "0A4b",
+  "vid": "ST_255a6219-9cf1-47bb-89f9-7a26aa86c941",
+  "version": "0.0.1",
+  "type": "profile",
+  "dashboard": {
+    "states": [],
+    "actions": [],
+    "basicPlus": []
+  },
+  "detailView": [
+    {
+      "component": "main",
+      "capability": "healthCheck",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "main",
+      "capability": "heartcircle52521.ph",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "main",
+      "capability": "voltageMeasurement",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "main",
+      "capability": "temperatureMeasurement",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "main",
+      "capability": "mode",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "main",
+      "capability": "notification",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "main",
+      "capability": "relativeHumidityMeasurement",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "Jacuzzi",
+      "capability": "healthCheck",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "Jacuzzi",
+      "capability": "thermostatHeatingSetpoint",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "Jacuzzi",
+      "capability": "temperatureMeasurement",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "Jacuzzi",
+      "capability": "switch",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "Blower",
+      "capability": "healthCheck",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "Blower",
+      "capability": "switch",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "Valve1",
+      "capability": "healthCheck",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "Valve1",
+      "capability": "switch",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "Valve2",
+      "capability": "healthCheck",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "Valve2",
+      "capability": "switch",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "Valve3",
+      "capability": "healthCheck",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "Valve3",
+      "capability": "switch",
+      "version": 1,
+      "values": [],
+      "patch": []
+    }
+  ],
+  "automation": {
+    "conditions": [
+      {
+        "component": "main",
+        "capability": "healthCheck",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "main",
+        "capability": "pHMeasurement",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "main",
+        "capability": "voltageMeasurement",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "main",
+        "capability": "temperatureMeasurement",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "main",
+        "capability": "mode",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "main",
+        "capability": "relativeHumidityMeasurement",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Jacuzzi",
+        "capability": "healthCheck",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Jacuzzi",
+        "capability": "thermostatHeatingSetpoint",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Jacuzzi",
+        "capability": "temperatureMeasurement",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Jacuzzi",
+        "capability": "switch",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Blower",
+        "capability": "healthCheck",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Blower",
+        "capability": "switch",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Valve1",
+        "capability": "healthCheck",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Valve1",
+        "capability": "switch",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Valve2",
+        "capability": "healthCheck",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Valve2",
+        "capability": "switch",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Valve3",
+        "capability": "healthCheck",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Valve3",
+        "capability": "switch",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      }
+    ],
+    "actions": [
+      {
+        "component": "main",
+        "capability": "healthCheck",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "main",
+        "capability": "mode",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "main",
+        "capability": "notification",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Jacuzzi",
+        "capability": "healthCheck",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Jacuzzi",
+        "capability": "thermostatHeatingSetpoint",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Jacuzzi",
+        "capability": "switch",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Blower",
+        "capability": "healthCheck",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Blower",
+        "capability": "switch",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Valve1",
+        "capability": "healthCheck",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Valve1",
+        "capability": "switch",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Valve2",
+        "capability": "healthCheck",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Valve2",
+        "capability": "switch",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Valve3",
+        "capability": "healthCheck",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Valve3",
+        "capability": "switch",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      }
+    ]
+  },
+  "migration": true
+}

@@ -129,8 +129,8 @@ caps_switch_data_t *caps_switch_initialize(IOT_CTX *ctx, const char *component, 
 
     memset((void*)caps_data, 0, sizeof(caps_switch_data_t));
 
-    caps_data->init_usr_cb = init_usr_cb;
-    caps_data->usr_data = usr_data;
+    caps_data->init_usr_cb = (void (*)(caps_switch_data_t*))init_usr_cb;
+    caps_data->usr_data = (caps_switch_data_t*)usr_data;
 
     caps_data->get_switch_value = caps_switch_get_switch_value;
     caps_data->set_switch_value = caps_switch_set_switch_value;

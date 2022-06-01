@@ -103,8 +103,8 @@ caps_relativeHumidityMeasurement_data_t *caps_relativeHumidityMeasurement_initia
 
     memset(caps_data, 0, sizeof(caps_relativeHumidityMeasurement_data_t));
 
-    caps_data->init_usr_cb = init_usr_cb;
-    caps_data->usr_data = usr_data;
+    caps_data->init_usr_cb = (void (*)(caps_relativeHumidityMeasurement_data_t*))init_usr_cb;
+    caps_data->usr_data = (caps_relativeHumidityMeasurement_data_t*)usr_data;
 
     caps_data->get_humidity_value = caps_relativeHumidityMeasurement_get_humidity_value;
     caps_data->set_humidity_value = caps_relativeHumidityMeasurement_set_humidity_value;

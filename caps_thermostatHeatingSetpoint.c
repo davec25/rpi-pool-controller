@@ -99,7 +99,7 @@ static void caps_thermostatHeatingSetpoint_cmd_setHeatingSetpoint_cb(IOT_CAP_HAN
 
 static void caps_thermostatHeatingSetpoint_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
 {
-    caps_thermostatHeatingSetpoint_data_t *caps_data = usr_data;
+    caps_thermostatHeatingSetpoint_data_t *caps_data = (caps_thermostatHeatingSetpoint_data_t*)usr_data;
     if (caps_data && caps_data->init_usr_cb)
         caps_data->init_usr_cb(caps_data);
     caps_thermostatHeatingSetpoint_attr_heatingSetpoint_send(caps_data);
@@ -118,8 +118,8 @@ caps_thermostatHeatingSetpoint_data_t *caps_thermostatHeatingSetpoint_initialize
 
     memset(caps_data, 0, sizeof(caps_thermostatHeatingSetpoint_data_t));
 
-    caps_data->init_usr_cb = init_usr_cb;
-    caps_data->usr_data = usr_data;
+    caps_data->init_usr_cb = (void (*)(caps_thermostatHeatingSetpoint_data_t*))init_usr_cb;
+    caps_data->usr_data = (caps_thermostatHeatingSetpoint_data_t*)usr_data;
 
     caps_data->get_heatingSetpoint_value = caps_thermostatHeatingSetpoint_get_heatingSetpoint_value;
     caps_data->set_heatingSetpoint_value = caps_thermostatHeatingSetpoint_set_heatingSetpoint_value;

@@ -1,0 +1,25 @@
+{
+  "name": "pHMeasurement",
+  "attributes": {
+    "acidity": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "pH": {
+            "type": "number",
+            "range": [
+              0,
+              14
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pH"
+        ]
+      },
+      "enumCommands": []
+    }
+  },
+}
+

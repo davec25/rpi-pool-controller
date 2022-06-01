@@ -1,0 +1,45 @@
+{
+  "dashboard": {
+    "states": [
+      {
+        "label": "{{acidity.pH}}",
+        "alternatives": []
+      }
+    ],
+    "actions": [],
+    "basicPlus": []
+  },
+  "detailView": [
+    {
+      "label": "pH",
+      "displayType": "slider",
+      "slider": {
+        "range": [
+          0,
+          14
+        ],
+        "step": 1,
+        "value": "acidity.pH"
+      }
+    }
+  ],
+  "automation": {
+    "conditions": [
+      {
+        "label": "pH",
+        "displayType": "slider",
+        "slider": {
+          "range": [
+            0,
+            14
+          ],
+          "step": 1,
+          "value": "acidity.pH"
+        }
+      }
+    ],
+    "actions": []
+  },
+  "id": "heartcircle52521.ph",
+  "version": 1
+}

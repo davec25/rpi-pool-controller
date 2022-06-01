@@ -13,7 +13,8 @@ int ChGenController::ProcessPacket(const unsigned char *pData, int len)
 {
     switch (len) {
        case 9:
-           printf("PPM: %d Status: %2.2x\n", pData[4]*50, pData[5]);
+           ppm = pData[4]*50; status = pData[5];
+           //printf("PPM: %d Status: %2.2x\n", ppm, status);
            break;
 
        case 24:
@@ -25,6 +26,23 @@ int ChGenController::ProcessPacket(const unsigned char *pData, int len)
 
        default:
         std::cerr << "ProcessPacket: packet size unexpected, " << len << "\n";
+        return(-1);
+    }
+
+    return(0);
+}
+
+int ChGenController::SetGenPercent(int percent)
+{
+    if (percent > 101 || percent < 0) return(-1);
+
+    std::cout << "SetGenPercent: " << percent << "\n";
+    unsigned char buf[] = { 0x10, 0x02, 0x50, 0x11, 0x00, 0x00, 0x00, 0x10, 0x03 } ;
+    buf[4] = percent & 0xFF;
+    percent_gen = percent;
+
+    if (SendPacket(buf, sizeof buf, 5)) {
+        std::cerr << "ChGenController::SendPacket failed\n";
         return(-1);
     }
 

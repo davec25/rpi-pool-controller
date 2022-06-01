@@ -13,6 +13,8 @@ SRCS = main.c \
 	comm.c \
 	thread.c \
 	caps_switch.c \
+	caps_switchLevel.c \
+	caps_powerMeter.c \
 	caps_temperatureMeasurement.c \
 	caps_thermostatHeatingSetpoint.c \
 	caps_voltageMeasurement.c \

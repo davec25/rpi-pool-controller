@@ -103,8 +103,8 @@ caps_temperatureMeasurement_data_t *caps_temperatureMeasurement_initialize(IOT_C
 
     memset(caps_data, 0, sizeof(caps_temperatureMeasurement_data_t));
 
-    caps_data->init_usr_cb = init_usr_cb;
-    caps_data->usr_data = usr_data;
+    caps_data->init_usr_cb = (void (*)(caps_temperatureMeasurement_data_t*))init_usr_cb;
+    caps_data->usr_data = (caps_temperatureMeasurement_data_t*)usr_data;
 
     caps_data->get_temperature_value = caps_temperatureMeasurement_get_temperature_value;
     caps_data->set_temperature_value = caps_temperatureMeasurement_set_temperature_value;
