@@ -8,9 +8,10 @@
 PumpController::PumpController(const char *device, int baud) :
                                         	HaywardController(device, baud)
 {
+// this doesn't set any speed.  it just gets the response with the watts
     const unsigned char buf[] = { 0x10, 0x02, 0x0C, 0x01, 0x00, 0x99, 0x00, 0x00, 0x10, 0x03 } ;
 
-    if (SendPacket(buf, sizeof buf, 5)) {
+    if (SendPacket(buf, sizeof buf, 60)) {
         std::cerr << "SendPacket failed\n";
         exit(-1);
     }
@@ -39,7 +40,7 @@ int PumpController::SetPumpPercent(int percent)
     percent_speed = percent;
     buf[5] = percent & 0xFF;
 
-    if (SendPacket(buf, sizeof buf, 5)) {
+    if (SendPacket(buf, sizeof buf, (percent) ? 5 : 60) ) {
         std::cerr << "SendPacket failed\n";
         return(-1);
     }

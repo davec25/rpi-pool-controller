@@ -41,7 +41,7 @@ int ChGenController::SetGenPercent(int percent)
     buf[4] = percent & 0xFF;
     percent_gen = percent;
 
-    if (SendPacket(buf, sizeof buf, 5)) {
+    if (SendPacket(buf, sizeof buf, 3)) {
         std::cerr << "ChGenController::SendPacket failed\n";
         return(-1);
     }
