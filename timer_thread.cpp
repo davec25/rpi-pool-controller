@@ -46,13 +46,11 @@ int TimerThread::InitTimerThread(int secs)
     struct itimerspec its = { 0 };
 
     if (secs < 0) secs = 0;
-
-    if (secs) {
-        its.it_value.tv_sec  = secs;
-    }
+    its.it_value.tv_sec  = secs;
 
     int res = 0;
-//    std::cout << "Timer thread - thread-id: " << pthread_self() << "\n";
+//    std::cout << "Timer thread - thread-id: " << pthread_self() << 
+//					", seconds: " << secs << "\n";
 
     /* start timer */
     res = timer_settime(timerId, 0, &its, NULL);

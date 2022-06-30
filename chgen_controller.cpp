@@ -36,6 +36,8 @@ int ChGenController::SetGenPercent(int percent)
 {
     if (percent > 101 || percent < 0) return(-1);
 
+    if (percent_gen == percent) return 0;
+
     std::cout << "SetGenPercent: " << percent << "\n";
     unsigned char buf[] = { 0x10, 0x02, 0x50, 0x11, 0x00, 0x00, 0x00, 0x10, 0x03 } ;
     buf[4] = percent & 0xFF;

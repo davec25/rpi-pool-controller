@@ -39,7 +39,7 @@
     },
     {
       "component": "Jacuzzi",
-      "capability": "heartcircle52521.jacuzzistate",
+      "capability": "valve",
       "version": 1,
       "values": [],
       "patch": []
@@ -58,12 +58,12 @@
       "values": [],
       "patch": [],
       "visibleCondition": {
-        "capability": "xxxxx.switch",
+        "capability": "switch",
         "version": 1,
-        "component": "Pump",
-        "value": "off.value",
+        "component": "Jacuzzi",
+        "value": "switch.value",
         "operator": "EQUALS",
-        "operand": "disabled"
+        "operand": "on"
       }
     },
     {
@@ -110,121 +110,67 @@
     },
     {
       "component": "Water",
-      "capability": "voltageMeasurement",
-      "version": 1,
-      "values": [],
-      "patch": [],
-      "visibleCondition": {
-        "capability": "xxxxx.switch",
-        "version": 1,
-        "component": "Pump",
-        "value": "off.value",
-        "operator": "EQUALS",
-        "operand": "disabled"
-      }
-    },
-    {
-      "component": "Water",
       "capability": "temperatureMeasurement",
       "version": 1,
       "values": [],
       "patch": [],
       "visibleCondition": {
-        "capability": "xxxxx.switch",
+        "capability": "switch",
         "version": 1,
         "component": "Pump",
-        "value": "off.value",
+        "value": "switch.value",
         "operator": "EQUALS",
-        "operand": "disabled"
+        "operand": "on"
       }
     },
     {
       "component": "Water",
-      "capability": "heartcircle52521.ph",
+      "capability": "voltageMeasurement",
       "version": 1,
       "values": [],
-      "patch": []
+      "patch": [],
+      "visibleCondition": {
+        "capability": "switch",
+        "version": 1,
+        "component": "Pump",
+        "value": "switch.value",
+        "operator": "EQUALS",
+        "operand": "on"
+      }
     },
     {
-      "component": "Valve1",
-      "capability": "healthCheck",
+      "component": "Water",
+      "capability": "pHMeasurement",
       "version": 1,
       "values": [],
-      "patch": []
+      "patch": [],
+      "visibleCondition": {
+        "capability": "switch",
+        "version": 1,
+        "component": "Pump",
+        "value": "switch.value",
+        "operator": "EQUALS",
+        "operand": "on"
+      }
     },
     {
-      "component": "Valve1",
-      "capability": "switch",
+      "component": "Water",
+      "capability": "powerMeter",
       "version": 1,
       "values": [],
-      "patch": []
-    },
-    {
-      "component": "Valve2",
-      "capability": "healthCheck",
-      "version": 1,
-      "values": [],
-      "patch": []
-    },
-    {
-      "component": "Valve2",
-      "capability": "switch",
-      "version": 1,
-      "values": [],
-      "patch": []
-    },
-    {
-      "component": "Valve3",
-      "capability": "healthCheck",
-      "version": 1,
-      "values": [],
-      "patch": []
-    },
-    {
-      "component": "Valve3",
-      "capability": "switch",
-      "version": 1,
-      "values": [],
-      "patch": []
-    },
-    {
-      "component": "Valve4",
-      "capability": "healthCheck",
-      "version": 1,
-      "values": [],
-      "patch": []
-    },
-    {
-      "component": "Valve4",
-      "capability": "switch",
-      "version": 1,
-      "values": [],
-      "patch": []
-    },
-    {
-      "component": "Valve5",
-      "capability": "healthCheck",
-      "version": 1,
-      "values": [],
-      "patch": []
-    },
-    {
-      "component": "Valve5",
-      "capability": "switch",
-      "version": 1,
-      "values": [],
-      "patch": []
+      "patch": [],
+      "visibleCondition": {
+        "capability": "switch",
+        "version": 1,
+        "component": "Pump",
+        "value": "switch.value",
+        "operator": "EQUALS",
+        "operand": "on"
+      }
     },
     {
       "component": "Pump",
       "capability": "healthCheck",
-      "version": 1,
-      "values": [],
-      "patch": []
-    },
-    {
-      "component": "Pump",
-      "capability": "switch",
       "version": 1,
       "values": [],
       "patch": []
@@ -234,30 +180,21 @@
       "capability": "switchLevel",
       "version": 1,
       "values": [],
-      "patch": [],
-      "visibleCondition": {
-        "capability": "xxxxx.switch",
-        "version": 1,
-        "component": "Pump",
-        "value": "off.value",
-        "operator": "EQUALS",
-        "operand": "disabled"
-      }
+      "patch": []
     },
     {
       "component": "Pump",
       "capability": "powerMeter",
       "version": 1,
       "values": [],
-      "patch": [],
-      "visibleCondition": {
-        "capability": "xxxxx.switch",
-        "version": 1,
-        "component": "Pump",
-        "value": "off.value",
-        "operator": "EQUALS",
-        "operand": "disabled"
-      }
+      "patch": []
+    },
+    {
+      "component": "Pump",
+      "capability": "switch",
+      "version": 1,
+      "values": [],
+      "patch": []
     },
     {
       "component": "Chlorinator",
@@ -268,32 +205,67 @@
     },
     {
       "component": "Chlorinator",
-      "capability": "switch",
-      "version": 1,
-      "values": [],
-      "patch": [],
-      "visibleCondition": {
-        "capability": "xxxxx.switch",
-        "version": 1,
-        "component": "Pump",
-        "value": "off.value",
-        "operator": "EQUALS",
-        "operand": "disabled"
-      }
-    },
-    {
-      "component": "Chlorinator",
       "capability": "switchLevel",
       "version": 1,
       "values": [],
       "patch": [],
       "visibleCondition": {
-        "capability": "xxxxx.switch",
+        "capability": "switch",
         "version": 1,
         "component": "Pump",
-        "value": "off.value",
+        "value": "switch.value",
         "operator": "EQUALS",
-        "operand": "disabled"
+        "operand": "on"
+      }
+    },
+    {
+      "component": "Clean",
+      "capability": "healthCheck",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "Clean",
+      "capability": "switch",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "Vacuum",
+      "capability": "healthCheck",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "Vacuum",
+      "capability": "switch",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "Ionizer",
+      "capability": "healthCheck",
+      "version": 1,
+      "values": [],
+      "patch": []
+    },
+    {
+      "component": "Ionizer",
+      "capability": "voltageMeasurement",
+      "version": 1,
+      "values": [],
+      "patch": [],
+      "visibleCondition": {
+        "capability": "switch",
+        "version": 1,
+        "component": "Pump",
+        "value": "switch.value",
+        "operator": "EQUALS",
+        "operand": "on"
       }
     }
   ],
@@ -333,7 +305,7 @@
       },
       {
         "component": "Jacuzzi",
-        "capability": "heartcircle52521.jacuzzistate",
+        "capability": "valve",
         "version": 1,
         "values": [],
         "patch": [],
@@ -405,14 +377,6 @@
       },
       {
         "component": "Water",
-        "capability": "voltageMeasurement",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Water",
         "capability": "temperatureMeasurement",
         "version": 1,
         "values": [],
@@ -421,87 +385,23 @@
       },
       {
         "component": "Water",
-        "capability": "heartcircle52521.ph",
+        "capability": "voltageMeasurement",
         "version": 1,
         "values": [],
         "patch": [],
         "exclusion": []
       },
       {
-        "component": "Valve1",
-        "capability": "healthCheck",
+        "component": "Water",
+        "capability": "pHMeasurement",
         "version": 1,
         "values": [],
         "patch": [],
         "exclusion": []
       },
       {
-        "component": "Valve1",
-        "capability": "switch",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Valve2",
-        "capability": "healthCheck",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Valve2",
-        "capability": "switch",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Valve3",
-        "capability": "healthCheck",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Valve3",
-        "capability": "switch",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Valve4",
-        "capability": "healthCheck",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Valve4",
-        "capability": "switch",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Valve5",
-        "capability": "healthCheck",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Valve5",
-        "capability": "switch",
+        "component": "Water",
+        "capability": "powerMeter",
         "version": 1,
         "values": [],
         "patch": [],
@@ -510,14 +410,6 @@
       {
         "component": "Pump",
         "capability": "healthCheck",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Pump",
-        "capability": "switch",
         "version": 1,
         "values": [],
         "patch": [],
@@ -540,6 +432,14 @@
         "exclusion": []
       },
       {
+        "component": "Pump",
+        "capability": "switch",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
         "component": "Chlorinator",
         "capability": "healthCheck",
         "version": 1,
@@ -549,6 +449,22 @@
       },
       {
         "component": "Chlorinator",
+        "capability": "switchLevel",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Clean",
+        "capability": "healthCheck",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Clean",
         "capability": "switch",
         "version": 1,
         "values": [],
@@ -556,8 +472,32 @@
         "exclusion": []
       },
       {
-        "component": "Chlorinator",
-        "capability": "switchLevel",
+        "component": "Vacuum",
+        "capability": "healthCheck",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Vacuum",
+        "capability": "switch",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Ionizer",
+        "capability": "healthCheck",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Ionizer",
+        "capability": "voltageMeasurement",
         "version": 1,
         "values": [],
         "patch": [],
@@ -592,6 +532,14 @@
       {
         "component": "Jacuzzi",
         "capability": "switch",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Jacuzzi",
+        "capability": "valve",
         "version": 1,
         "values": [],
         "patch": [],
@@ -638,96 +586,8 @@
         "exclusion": []
       },
       {
-        "component": "Valve1",
-        "capability": "healthCheck",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Valve1",
-        "capability": "switch",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Valve2",
-        "capability": "healthCheck",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Valve2",
-        "capability": "switch",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Valve3",
-        "capability": "healthCheck",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Valve3",
-        "capability": "switch",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Valve4",
-        "capability": "healthCheck",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Valve4",
-        "capability": "switch",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Valve5",
-        "capability": "healthCheck",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Valve5",
-        "capability": "switch",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
         "component": "Pump",
         "capability": "healthCheck",
-        "version": 1,
-        "values": [],
-        "patch": [],
-        "exclusion": []
-      },
-      {
-        "component": "Pump",
-        "capability": "switch",
         "version": 1,
         "values": [],
         "patch": [],
@@ -742,6 +602,14 @@
         "exclusion": []
       },
       {
+        "component": "Pump",
+        "capability": "switch",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
         "component": "Chlorinator",
         "capability": "healthCheck",
         "version": 1,
@@ -751,6 +619,22 @@
       },
       {
         "component": "Chlorinator",
+        "capability": "switchLevel",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Clean",
+        "capability": "healthCheck",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Clean",
         "capability": "switch",
         "version": 1,
         "values": [],
@@ -758,8 +642,24 @@
         "exclusion": []
       },
       {
-        "component": "Chlorinator",
-        "capability": "switchLevel",
+        "component": "Vacuum",
+        "capability": "healthCheck",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Vacuum",
+        "capability": "switch",
+        "version": 1,
+        "values": [],
+        "patch": [],
+        "exclusion": []
+      },
+      {
+        "component": "Ionizer",
+        "capability": "healthCheck",
         "version": 1,
         "values": [],
         "patch": [],

@@ -19,6 +19,7 @@ SRCS = main.c \
 	caps_thermostatHeatingSetpoint.c \
 	caps_voltageMeasurement.c \
 	caps_relativeHumidityMeasurement.c \
+	caps_valve.c \
 	chgen_controller.cpp \
 	pump_controller.cpp \
 	hayward_controller.cpp \

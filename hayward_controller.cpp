@@ -36,7 +36,8 @@ int HaywardController::SetupPort(const char *device, int baud, int parity = 0)
 {
 //    std::cout << "SetupPort " << device << "\n";
 
-    pump_fd = open (device, O_RDWR | O_NOCTTY | O_SYNC);
+    pump_fd = open (device, O_RDWR | O_NOCTTY );
+//    pump_fd = open (device, O_RDWR | O_NOCTTY | O_SYNC);
     if (pump_fd < 0)
     {
         std::cerr << "error " << errno << " opening " << device << ": " 
@@ -51,25 +52,38 @@ int HaywardController::SetupPort(const char *device, int baud, int parity = 0)
         return (-1);
     }
 
+#ifdef NOT
+    cfsetospeed (&tty, baud);
+    cfsetispeed (&tty, baud);
+
+    cfmakeraw(&tty);
+    tty.c_cflag     |= (CLOCAL | CREAD | CS8);
+    tty.c_cflag |= CSTOPB;
+    tty.c_cflag &= ~CRTSCTS;
+    tty.c_cc[VMIN]  = 0;            // read doesn't block
+    tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
+
+    tty.c_cflag     |= (CLOCAL | CREAD | CS8);
+    tty.c_lflag     &= ~(ICANON | ECHO | ECHOE | ISIG);
+    tty.c_oflag     &= ~OPOST;
+    tty.c_cc[VMIN]  = 0;
+    tty.c_cc[VTIME] = 5;
+
+    tty.c_cflag = baud | CS8 | CLOCAL | CREAD;
+    tty.c_iflag = IGNPAR ;
+    tty.c_oflag = 0;
+    tty.c_lflag = 0; // ICANON;
+    tty.c_cc[VMIN]  = 0;            // read doesn't block
+    tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
+#endif // NOT
+
     cfsetospeed (&tty, baud);
     cfsetispeed (&tty, baud);
 
     tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;     // 8-bit chars
-    // disable IGNBRK for mismatched speed tests; otherwise receive break
-    // as \000 chars
-    tty.c_iflag &= ~IGNBRK;         // disable break processing
-    tty.c_lflag = 0;                // no signaling chars, no echo,
-                                    // no canonical processing
-    tty.c_oflag = 0;                // no remapping, no delays
-    tty.c_cc[VMIN]  = 0;            // read doesn't block
-    tty.c_cc[VTIME] = 20;            // 0.5 seconds read timeout
-
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
-
-    tty.c_cflag |= (CLOCAL | CREAD);// ignore modem controls,
+    tty.c_cflag |= (CLOCAL | CREAD );// ignore modem controls,
                                     // enable reading
     tty.c_cflag &= ~(PARENB | PARODD);      // shut off parity
-
     if (parity)
        tty.c_cflag |= PARENB ;
     if (parity < 0)
@@ -78,11 +92,26 @@ int HaywardController::SetupPort(const char *device, int baud, int parity = 0)
     tty.c_cflag |= CSTOPB;
     tty.c_cflag &= ~CRTSCTS;
 
+
+    // disable IGNBRK for mismatched speed tests; otherwise receive break
+    // as \000 chars
+    tty.c_iflag &= ~IGNBRK;         // disable break processing
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
+//    tty.c_iflag |= IGNPAR ;
+
+    tty.c_lflag = 0;                // no signaling chars, no echo,
+                                    // no canonical processing
+    tty.c_oflag = 0;                // no remapping, no delays
+    tty.c_cc[VMIN]  = 0;            // read doesn't block
+    tty.c_cc[VTIME] = 10;            // 5 seconds read timeout
+
+
     if (tcsetattr (pump_fd, TCSANOW, &tty) != 0)
     {
         std::cerr << "error " << errno << " from tcsetattr";
         return (-1);
     }
+//    tcflush(pump_fd, TCIFLUSH);
 
     return(0);
 }
@@ -99,7 +128,8 @@ int HaywardController::GetPacket(unsigned char buf[], int max)
     while(max > cnt) {
         int len = read (pump_fd, &databyte, 1);  
         if (len<1) {
-            std::cerr << "read failed " << len << " " << strerror(errno) << "\n";
+            std::cerr << Name() << " read failed " << strerror(errno) << 
+			", cnt:" << cnt << ", max:" << max << "\n";
             return(-1);
         }
 
@@ -132,7 +162,7 @@ int HaywardController::GetPacket(unsigned char buf[], int max)
         case POSTAMBLE_03:
             if (0x03 == databyte) {
                 buf[cnt++] = databyte;
-                return (cnt);
+                return (cnt); // successful return is here
             } else if (0x10 == databyte) {
                 state = POSTAMBLE_10;
                 continue;
@@ -184,9 +214,12 @@ int HaywardController::GenerateCSC(unsigned char *data, int len)
 
 int HaywardController::SendPacket(const unsigned char *data, int size, int interval_secs)
 {
-//    std::cout << "SendPacket: timer_secs = " << timer_secs << "\n";
+//    std::cout << "SendPacket: timer_secs = " << interval_secs << "\n";
 
-    if (PacketPrechecks(data, size)) return (-1);
+    if (PacketPrechecks(data, size)) {
+        std::cerr << "SendPacket: precheck failed\n";
+        return (-1);
+    }
 
     // mutex lock
     if (packet) 
@@ -215,34 +248,36 @@ void HaywardController::ThreadProcess(void)
     int ret = write (pump_fd, packet, packet_len);
     // mutex free
 
-    if (-1 == ret) {
-        std::cerr << "write failed\n";
+    if (ret < packet_len) {
+        std::cerr << "ThreadProcess: write failed: " << strerror(errno) << "\n";
         return;
     }
 
 #ifdef NOT
-    std::cout << "command sent: ";
+    std::cout << Name() << " command sent: ";
     for (int i=0; i<packet_len; i++)
         printf("%2.2X ", packet[i]);
     std::cout << "\n\n";
 #endif // NOT
 
     if ( (len = GetPacket(pData, sizeof pData)) == -1) {
-        std::cerr << "GetPacket returned fail\n";
-        commState = FALSE;
-        tries = 0;
-    }
-
-    if (0x03 != pData[len-1] || 0x10 != pData[len-2]) {
-        std::cerr << "partial packet received\n";
+        std::cerr << Name() << " GetPacket returned fail\n";
         if (tries-- < 0) {
-            std::cerr << "going to fault state\n";
+            std::cerr << Name() << " ThreadProcess: going to fault state\n";
             commState = FALSE;
         }
         return;
     }
 
+//#ifdef NOT
+    std::cout << Name() << " packet received: ";
+    for (int i=0; i<len; i++)
+        printf("%2.2X ", pData[i]);
+    std::cout << "\n\n";
+//#endif // NOT
+
     csc = 0;
+
     for (int i=0; i<len; i++)
         if (i < (len-4)) csc+=pData[i];
 
@@ -256,11 +291,15 @@ void HaywardController::ThreadProcess(void)
     }
 #endif // NOT
 
+    if (tries != 3) {
+        std::cerr << Name() << " ThreadProcess: connection restored\n";
+    }
+
     commState = TRUE;
     tries = 3;
     if (ProcessPacket((const unsigned char *)pData, len)) {
-        std::cerr << "HaywardController::ThreadProcess: subclass unhappy with packet\n";
+        std::cerr << Name() << ": subclass unhappy with packet\n";
     }
+//     std::cout << "packet processed\n";
     return;
 }
-

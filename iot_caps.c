@@ -44,37 +44,55 @@
 #include "caps_temperatureMeasurement.h"
 #include "caps_voltageMeasurement.h"
 #include "caps_relativeHumidityMeasurement.h"
+#include "caps_valve.h"
 #include "pump_controller.hpp"
 #include "chgen_controller.hpp"
 
-#define ENUM_HEATER 8
-#define ENUM_VALVE1 7
-#define ENUM_VALVE2 6
-#define ENUM_VALVE3 5
-#define ENUM_ACID   4
-#define ENUM_BLOWER 3
-#define ENUM_VALVE4 2
-#define ENUM_VALVE5 1
+#define ENUM_SKIMMER    10 // skimmer
+#define ENUM_VACUUM     9  // vacuum
+#define ENUM_HEATER     8
+#define ENUM_SPA_DRAIN  7  // SPA drain
+#define ENUM_SPA_FLOOR  6  // SPA floor
+#define ENUM_SPA_JETS   5  // SPA jets
+#define ENUM_ACID       4  // acid pump
+#define ENUM_BLOWER     3
+#define ENUM_DRAIN_MAIN 2  // main drain
+#define ENUM_PRESET     1  // pump reset
 
 caps_switch_data_t *jacuzzi=NULL, *blower=NULL, *v1=NULL, *v2=NULL, *v3=NULL;
-caps_switch_data_t *v4=NULL, *v5=NULL, *pump=NULL, *chgen=NULL;
+caps_switch_data_t *v4=NULL, *v5=NULL;
+caps_switch_data_t *pump=NULL, *cleaner=NULL, *vacuum=NULL;
+
 caps_switchLevel_data_t *pump_level=NULL, *chgen_level=NULL;
+
 caps_powerMeter_data_t *pump_power=NULL;
+
 caps_thermostatHeatingSetpoint_data_t *setTemp=NULL;
+
 caps_temperatureMeasurement_data_t *tempWater=NULL;
 caps_temperatureMeasurement_data_t *tempCase=NULL;
 caps_temperatureMeasurement_data_t *tempOutside=NULL;
-caps_voltageMeasurement_data_t *orp=NULL;
+
+caps_voltageMeasurement_data_t *ionizer=NULL;
+
+//caps_voltageMeasurement_data_t *orp=NULL;
+caps_powerMeter_data_t *orp=NULL;
+
 caps_relativeHumidityMeasurement_data_t *relHum=NULL;
-IOT_CAP_HANDLE *jacuzziState=NULL;
+
+caps_valve_data_t *fill=NULL;
+//IOT_CAP_HANDLE *jacuzziState=NULL;
+
 IOT_CAP_HANDLE *pH=NULL;
+
 const char setReady[] = "Ready";
 const char setNotReady[] = "notReady";
 char *isJacuzziReady = (char *)setNotReady;
 const float waterAdj = -4.0;
 
 int relayDevice;
-double currentPH=7.7;
+double currentPH=7.0;
+double voltsIonizer=13.0;
 bool heaterUsing = false;
 bool pumpWasOn = false;
 int pumpLastPercent = 0;
@@ -196,18 +214,28 @@ void cap_pH_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
     currentPH = getPH();
 
     /* Send initial pH attribute */
-    ST_CAP_SEND_ATTR_NUMBER(handle, "acidity", currentPH, NULL, NULL, sequence_no);
+    ST_CAP_SEND_ATTR_NUMBER(handle, "pH", currentPH, NULL, NULL, sequence_no);
 
     if (sequence_no < 0)
         std::cerr << "fail to send pH value\n";
 }
 
-void cap_voltage_init_cb(struct caps_switch_data *caps_data)
+void cap_voltage_init_cb_orp(struct caps_switch_data *caps_data)
 {
     double val = getORP();
 
-    orp->set_voltage_value(orp, val);
-    orp->set_voltage_unit(orp,
+//    orp->set_voltage_value(orp, val);
+//    orp->set_voltage_unit(orp,
+//                        caps_helper_voltageMeasurement.attr_voltage.unit_V);
+    orp->set_power_value(orp, val);
+    orp->set_power_unit(orp,
+                        caps_helper_powerMeter.attr_power.unit_W);
+}
+
+void cap_voltage_init_cb_ionizer(struct caps_switch_data *caps_data)
+{
+    ionizer->set_voltage_value(ionizer, voltsIonizer);
+    ionizer->set_voltage_unit(ionizer,
                         caps_helper_voltageMeasurement.attr_voltage.unit_V);
 }
 
@@ -252,16 +280,40 @@ void SetJacuzziNotReady()
 {
     int32_t sequence_no = 1;
     isJacuzziReady = (char *)setNotReady;
-    ST_CAP_SEND_ATTR_STRING(jacuzziState, "isReady", isJacuzziReady, NULL, NULL, sequence_no);
+//    ST_CAP_SEND_ATTR_STRING(jacuzziState, "isReady", isJacuzziReady, NULL, NULL, sequence_no);
 }
 
 void SetJacuzziReady() 
 {
     int32_t sequence_no = 1;
     isJacuzziReady = (char *)setReady;
-    ST_CAP_SEND_ATTR_STRING(jacuzziState, "isReady", isJacuzziReady, NULL, NULL, sequence_no);
+//    ST_CAP_SEND_ATTR_STRING(jacuzziState, "isReady", isJacuzziReady, NULL, NULL, sequence_no);
 }
 
+
+void StopJacuzzi(void)
+{
+    if (strcmp(caps_helper_switch.attr_switch.value_off, 
+						jacuzzi->switch_value))
+        return;
+
+    doRelayWrite(relayDevice, ENUM_SPA_DRAIN, 0);
+    doRelayWrite(relayDevice, ENUM_SPA_FLOOR, 0);
+    doRelayWrite(relayDevice, ENUM_SPA_JETS, 0);
+    doRelayWrite(relayDevice, ENUM_HEATER, 0);
+    heaterUsing = 0;
+}
+
+void JacuzziSwitchOff(void)
+{
+    if (strcmp(caps_helper_switch.attr_switch.value_off, 
+						jacuzzi->switch_value))
+        return;
+
+    jacuzzi->set_switch_value(jacuzzi, 
+				caps_helper_switch.attr_switch.value_off);
+    jacuzzi->attr_switch_send(jacuzzi);
+}
 
 static void cap_switch_cmd_cb_pump(struct caps_switch_data *caps_data)
 {
@@ -275,13 +327,15 @@ static void cap_switch_cmd_cb_pump(struct caps_switch_data *caps_data)
         return;
     }
 
-    std::cerr << "Pump switch state " << caps_data->switch_value << "\n";
-    if (!strcmp(caps_helper_switch.attr_switch.value_off, caps_data->switch_value)) {
-        pc->SetPumpPercent(0);
-    } else if (!strcmp(caps_helper_switch.attr_switch.value_on,caps_data->switch_value)) {
+    std::cout << "Pump switch state " << caps_data->switch_value << "\n";
+    if (!strcmp(caps_helper_switch.attr_switch.value_off, 
+						caps_data->switch_value)) {
+        pc->StopPump();
+    } else if (!strcmp(caps_helper_switch.attr_switch.value_on,
+						caps_data->switch_value)) {
         if (!pumpLastPercent)
-            pumpLastPercent = 1900;
-        pc->SetPumpRPMs(pumpLastPercent);
+            pumpLastPercent = 55;
+        pc->SetPumpPercent(pumpLastPercent);
     } else {
         std::cerr << "unknown switch state " << caps_data->switch_value << "\n";
         return;
@@ -297,7 +351,7 @@ static void cap_switch_init_cb_pump(struct caps_switch_data *caps_data)
 				caps_helper_switch.attr_switch.value_off);
 }
 
-static void cap_switch_cmd_cb_chgen(struct caps_switch_data *caps_data)
+static void cap_switch_cmd_cb_cleaner(struct caps_switch_data *caps_data)
 {
     if (!caps_data || !caps_data->handle) {
         std::cerr << "fail to get handle\n";
@@ -309,99 +363,90 @@ static void cap_switch_cmd_cb_chgen(struct caps_switch_data *caps_data)
         return;
     }
 
-    std::cerr << "ChGen switch state " << caps_data->switch_value << "\n";
-    if (!strcmp(caps_helper_switch.attr_switch.value_off, caps_data->switch_value)) {
-        gc->SetGenPercent(0);
-    } else if (!strcmp(caps_helper_switch.attr_switch.value_on,caps_data->switch_value)) {
-        if (!ChGenLastPercent)
-            ChGenLastPercent = 100;
-        gc->SetGenPercent(ChGenLastPercent);
+    std::cout << "Cleaner switch state " << caps_data->switch_value << "\n";
+    if (!strcmp(caps_helper_switch.attr_switch.value_off, 
+						caps_data->switch_value)) {
+        pc->StopPump();
+// FIXME
+    } else if (!strcmp(caps_helper_switch.attr_switch.value_on,
+						caps_data->switch_value)) {
+// turn off jacuzzi
+        StopJacuzzi();
+        JacuzziSwitchOff();
+
+        doRelayWrite(relayDevice, ENUM_DRAIN_MAIN, 1);// main drain open
+        doRelayWrite(relayDevice, ENUM_SKIMMER, 1);   // skimmer open
+        doRelayWrite(relayDevice, ENUM_VACUUM, 0);    // vacuum closed
+        pc->SetPumpRPMs(1900);
     } else {
         std::cerr << "unknown switch state " << caps_data->switch_value << "\n";
         return;
     }
 }
 
-static void cap_switch_init_cb_chgen(struct caps_switch_data *caps_data)
+static void cap_switch_init_cb_cleaner(struct caps_switch_data *caps_data)
 {
-    caps_data->cmd_on_usr_cb = cap_switch_cmd_cb_chgen;
-    caps_data->cmd_off_usr_cb = cap_switch_cmd_cb_chgen;
+    caps_data->cmd_on_usr_cb = cap_switch_cmd_cb_cleaner;
+    caps_data->cmd_off_usr_cb = cap_switch_cmd_cb_cleaner;
 
-    caps_data->set_switch_value(chgen, 
+    caps_data->set_switch_value(caps_data, 
 				caps_helper_switch.attr_switch.value_off);
 }
 
-static void cap_level_cmd_cb_pump(struct caps_switchLevel_data *caps_data)
+static void cap_switch_cmd_cb_vacuum(struct caps_switch_data *caps_data)
 {
     if (!caps_data || !caps_data->handle) {
         std::cerr << "fail to get handle\n";
         return;
     }
 
-    std::cerr << "Pump switchLevel " << caps_data->level_value << "\n";
-    pc->SetPumpPercent(caps_data->level_value);
-    pumpLastPercent = caps_data->level_value;
-
-    if (caps_data->level_value) {
-        if (!strcmp(caps_helper_switch.attr_switch.value_off, 
-							pump->switch_value)) {
-            pump->set_switch_value(pump, 
-				caps_helper_switch.attr_switch.value_on);
-            pump->attr_switch_send(pump);
-        }
-    } else {
-        if (!strcmp(caps_helper_switch.attr_switch.value_on, 
-							pump->switch_value)) {
-            pump->set_switch_value(pump, 
-				caps_helper_switch.attr_switch.value_on);
-            pump->attr_switch_send(pump);
-        }
-    }
-    pump_level->attr_level_send(pump_level);
-}
-
-static void cap_level_init_cb_pump(struct caps_switchLevel_data *caps_data)
-{
-    pump_level->cmd_setLevel_usr_cb = cap_level_cmd_cb_pump;
-    pump_level->set_level_value(pump_level, 0);
-}
-
-static void cap_level_cmd_cb_chgen(struct caps_switchLevel_data *caps_data)
-{
-    if (!caps_data || !caps_data->handle) {
-        std::cerr << "fail to get handle\n";
+    if (!caps_data->switch_value) {
+        std::cerr << "value is NULL\n";
         return;
     }
 
-    std::cerr << "ChGen switchLevel " << caps_data->level_value << "\n";
-    gc->SetGenPercent(caps_data->level_value);
-    ChGenLastPercent = caps_data->level_value;
+    std::cout << "Vacuum switch state " << caps_data->switch_value << "\n";
+    if (!strcmp(caps_helper_switch.attr_switch.value_off, 
+						caps_data->switch_value)) {
+        pc->StopPump();
+    } else if (!strcmp(caps_helper_switch.attr_switch.value_on,
+						caps_data->switch_value)) {
+// turn off jacuzzi
+        StopJacuzzi();
+        JacuzziSwitchOff();
 
-    if (caps_data->level_value) {
-        if (!strcmp(caps_helper_switch.attr_switch.value_off, 
-							chgen->switch_value)) {
-            chgen->set_switch_value(chgen, 
-				caps_helper_switch.attr_switch.value_on);
-            chgen->attr_switch_send(chgen);
-        }
+        doRelayWrite(relayDevice, ENUM_DRAIN_MAIN, 0);// main drain closed
+        doRelayWrite(relayDevice, ENUM_SKIMMER, 0);   // skimmer closed
+        doRelayWrite(relayDevice, ENUM_VACUUM, 1);    // vacuum open
+        pc->SetPumpRPMs(1900); // speed for the vacuum
     } else {
-        if (!strcmp(caps_helper_switch.attr_switch.value_on, 
-							chgen->switch_value)) {
-            chgen->set_switch_value(chgen, 
-				caps_helper_switch.attr_switch.value_on);
-            chgen->attr_switch_send(chgen);
-        }
+        std::cerr << "unknown switch state " << caps_data->switch_value << "\n";
+        return;
     }
 }
 
-static void cap_level_init_cb_chgen(struct caps_switchLevel_data *caps_data)
+static void cap_switch_init_cb_vacuum(struct caps_switch_data *caps_data)
 {
-    chgen_level->cmd_setLevel_usr_cb = cap_level_cmd_cb_chgen;
-    chgen_level->set_level_value(chgen_level, 0);
+    caps_data->cmd_on_usr_cb = cap_switch_cmd_cb_vacuum;
+    caps_data->cmd_off_usr_cb = cap_switch_cmd_cb_vacuum;
+
+    caps_data->set_switch_value(caps_data, 
+				caps_helper_switch.attr_switch.value_off);
 }
 
+void StopFill(union sigval timer_data)
+{
+    if (!strcmp(caps_helper_switch.attr_switch.value_on, 
+						jacuzzi->switch_value)) {
+        doRelayWrite(relayDevice, ENUM_SPA_DRAIN, 1);
+        doRelayWrite(relayDevice, ENUM_HEATER, 1);
+        pc->SetPumpRPMs(1900);
+        fill->set_valve_value(fill, caps_helper_valve.attr_valve.value_closed);
+        fill->attr_valve_send(fill);
+    }
+}
 
-void JacuzziTimer(int secs, void func(union sigval timer_data))
+void TimerHelper(int secs, void func(union sigval timer_data))
 {
     int res = 0;
     timer_t timerId = 0;
@@ -437,6 +482,115 @@ void JacuzziTimer(int secs, void func(union sigval timer_data))
     return;
 }
 
+void StartFillTimer(void)
+{
+    TimerHelper(900, StopFill);
+}
+
+static void cap_valve_cmd_cb_jacuzzi(struct caps_valve_data *caps_data)
+{
+    if (!caps_data || !caps_data->handle) {
+        std::cerr << "fail to get handle\n";
+        return;
+    }
+
+    if (!strcmp(caps_helper_valve.attr_valve.value_closed, 
+						caps_data->valve_value)) {
+        
+        if (!strcmp(caps_helper_switch.attr_switch.value_on, 
+						jacuzzi->switch_value)) {
+            doRelayWrite(relayDevice, ENUM_SPA_DRAIN, 1);
+            pc->SetPumpRPMs(1900);
+        }
+    } else if (!strcmp(caps_helper_valve.attr_valve.value_open, 
+						caps_data->valve_value)) {
+        if (!strcmp(caps_helper_switch.attr_switch.value_on, 
+						jacuzzi->switch_value)) {
+            doRelayWrite(relayDevice, ENUM_SPA_DRAIN, 0);
+            doRelayWrite(relayDevice, ENUM_HEATER, 1);
+            pc->SetPumpPercent(100);
+            StartFillTimer();
+        }
+    }
+}
+
+static void cap_level_cmd_cb_pump(struct caps_switchLevel_data *caps_data)
+{
+    if (!caps_data || !caps_data->handle) {
+        std::cerr << "fail to get handle\n";
+        return;
+    }
+
+    std::cout << "Pump switchLevel " << caps_data->level_value << "\n";
+    caps_data->level_value = pumpLastPercent;
+    if (caps_data->level_value)
+        pc->SetPumpPercent(caps_data->level_value);
+    else
+        pc->StopPump();
+    pumpLastPercent = caps_data->level_value;
+
+    if (caps_data->level_value) {
+        if (!strcmp(caps_helper_switch.attr_switch.value_off, 
+							pump->switch_value)) {
+            pump->set_switch_value(pump, 
+				caps_helper_switch.attr_switch.value_on);
+            pump->attr_switch_send(pump);
+        }
+    } else {
+        if (!strcmp(caps_helper_switch.attr_switch.value_on, 
+							pump->switch_value)) {
+            pump->set_switch_value(pump, 
+				caps_helper_switch.attr_switch.value_on);
+            pump->attr_switch_send(pump);
+        }
+    }
+    pump_level->attr_level_send(pump_level);
+}
+
+static void cap_level_init_cb_pump(struct caps_switchLevel_data *caps_data)
+{
+    pump_level->cmd_setLevel_usr_cb = cap_level_cmd_cb_pump;
+    pump_level->set_level_value(pump_level, 0);
+}
+
+static void cap_level_cmd_cb_chgen(struct caps_switchLevel_data *caps_data)
+{
+    if (!caps_data || !caps_data->handle) {
+        std::cerr << "fail to get handle\n";
+        return;
+    }
+
+    std::cout << "ChGen switchLevel " << caps_data->level_value << "\n";
+//    gc->SetGenPercent(caps_data->level_value);
+//    ChGenLastPercent = caps_data->level_value;
+    caps_data->level_value = ChGenLastPercent;
+
+#ifdef NOT
+    if (caps_data->level_value) {
+        if (!strcmp(caps_helper_switch.attr_switch.value_off, 
+							chgen->switch_value)) {
+            chgen->set_switch_value(chgen, 
+				caps_helper_switch.attr_switch.value_on);
+            chgen->attr_switch_send(chgen);
+        }
+    } else {
+        if (!strcmp(caps_helper_switch.attr_switch.value_on, 
+							chgen->switch_value)) {
+            chgen->set_switch_value(chgen, 
+				caps_helper_switch.attr_switch.value_on);
+            chgen->attr_switch_send(chgen);
+        }
+    }
+#endif
+}
+
+static void cap_level_init_cb_chgen(struct caps_switchLevel_data *caps_data)
+{
+    chgen_level->cmd_setLevel_usr_cb = cap_level_cmd_cb_chgen;
+    chgen_level->set_level_value(chgen_level, 0);
+}
+
+
 void StartHeater(union sigval timer_data)
 {
     heaterUsing = true;
@@ -444,11 +598,21 @@ void StartHeater(union sigval timer_data)
 
 void StartJacuzziSeries(void)
 {
-    // switch valves 1 & 3
-    doRelayWrite(relayDevice, ENUM_VALVE1, 1);
-    doRelayWrite(relayDevice, ENUM_VALVE3, 1);
+    SetJacuzziNotReady();
 
-    JacuzziTimer(10, StartHeater);
+    if (!strcmp(caps_helper_valve.attr_valve.value_closed,
+                                                fill->valve_value)) {
+        pc->SetPumpRPMs(1900);
+        doRelayWrite(relayDevice, ENUM_SPA_DRAIN, 1);
+    } else {
+        pc->SetPumpPercent(100);
+        doRelayWrite(relayDevice, ENUM_SPA_DRAIN, 0);
+        StartFillTimer();
+    }
+    doRelayWrite(relayDevice, ENUM_SPA_FLOOR, 1);
+    doRelayWrite(relayDevice, ENUM_SPA_JETS, 1);
+
+    TimerHelper(20, StartHeater);
 }
 
 static void cap_switch_cmd_cb_jacuzzi(struct caps_switch_data *caps_data)
@@ -466,21 +630,11 @@ static void cap_switch_cmd_cb_jacuzzi(struct caps_switch_data *caps_data)
     }
 
     std::cerr << "Jacuzzi switch state " << caps_data->switch_value << "\n";
-    if (!strcmp(caps_helper_switch.attr_switch.value_off, caps_data->switch_value)) {
-// turn heater off
-        int val = doRelayWrite(relayDevice, ENUM_HEATER, 0);
-        val = doRelayWrite(relayDevice, ENUM_VALVE1, 0);
-//        val = doRelayWrite(relayDevice, ENUM_VALVE2, 0);
-        val = doRelayWrite(relayDevice, ENUM_VALVE3, 0);
-// stop pump
-        pc->SetPumpPercent(0);
-        heaterUsing = false;
-        SetJacuzziNotReady();
-    } else if (!strcmp(caps_helper_switch.attr_switch.value_on,caps_data->switch_value)) {
-// maybe not all at once
-        SetJacuzziNotReady();
-// turn on pump
-        pc->SetPumpRPMs(1900);
+    if (!strcmp(caps_helper_switch.attr_switch.value_off, 
+						caps_data->switch_value)) {
+        StopJacuzzi();
+    } else if (!strcmp(caps_helper_switch.attr_switch.value_on,
+						caps_data->switch_value)) {
         StartJacuzziSeries();
     } else {
         std::cerr << "unknown switch state " << caps_data->switch_value << "\n";
@@ -496,6 +650,15 @@ static void cap_switch_init_cb_jacuzzi(struct caps_switch_data *caps_data)
     caps_data->set_switch_value(jacuzzi, 
 				caps_helper_switch.attr_switch.value_off);
     SetJacuzziNotReady();
+}
+
+static void cap_valve_init_cb_jacuzzi(struct caps_valve_data *caps_data)
+{
+    caps_data->cmd_open_usr_cb = cap_valve_cmd_cb_jacuzzi;
+    caps_data->cmd_close_usr_cb = cap_valve_cmd_cb_jacuzzi;
+
+    caps_data->set_valve_value(fill, 
+				caps_helper_valve.attr_valve.value_closed);
 }
 
 void cap_setpoint_init_cb(IOT_CAP_HANDLE *handle, void *usr_data)
@@ -518,11 +681,29 @@ static void cap_switch_cmd_cb_blower(struct caps_switch_data *caps_data)
         return;
     }
 
+    if (!strcmp(caps_helper_switch.attr_switch.value_off, 
+						jacuzzi->switch_value)) {
+        caps_data->set_switch_value(caps_data, 
+				caps_helper_switch.attr_switch.value_off);
+        return;
+    }
+
     std::cerr << "blower switch state " << caps_data->switch_value << "\n";
     if (!strcmp(caps_helper_switch.attr_switch.value_off, caps_data->switch_value)) {
         doRelayWrite(relayDevice, ENUM_BLOWER, 0);
-    } else if (!strcmp(caps_helper_switch.attr_switch.value_on, caps_data->switch_value)) {
+        pc->SetPumpRPMs(1900);
+    } else if (!strcmp(caps_helper_switch.attr_switch.value_on, 
+						caps_data->switch_value)) {
+// if the jacuzzi isn't on, I'm not going to let you turn on the blower
+        if (!strcmp(caps_helper_switch.attr_switch.value_off, 
+						jacuzzi->switch_value)) {
+            caps_data->set_switch_value(caps_data, 
+				caps_helper_switch.attr_switch.value_off);
+            return;
+        }
+
         doRelayWrite(relayDevice, ENUM_BLOWER, 1);
+        pc->SetPumpPercent(100);
     } else {
         printf("unknown switch state %s\n", caps_data->switch_value);
     }
@@ -541,129 +722,78 @@ static void cap_switch_init_cb_blower(struct caps_switch_data *caps_data)
     }
 }
 
-static void cap_switch_cmd_cb_v1(struct caps_switch_data *caps_data)
+void StopAcid(union sigval timer_data)
 {
-    std::cerr << "v1 switch state " << caps_data->switch_value << "\n";
-    if (!strcmp(caps_helper_switch.attr_switch.value_off, caps_data->switch_value)) {
-        doRelayWrite(relayDevice,ENUM_VALVE1,0);
-    } else if (!strcmp(caps_helper_switch.attr_switch.value_on,caps_data->switch_value)) {
-        doRelayWrite(relayDevice,ENUM_VALVE1,1);
-    } else {
-        std::cerr << "unknown switch state " << caps_data->switch_value << "\n";
-    }
+    doRelayWrite(relayDevice, ENUM_ACID, 0);
 }
 
-static void cap_switch_cmd_cb_v2(struct caps_switch_data *caps_data)
+void DeployAcid(int secs)
 {
-    std::cerr << "v2 switch state " << caps_data->switch_value << "\n";
-    if (!strcmp(caps_helper_switch.attr_switch.value_off, caps_data->switch_value)) {
-        doRelayWrite(relayDevice,ENUM_VALVE2,0);
-    } else if (!strcmp(caps_helper_switch.attr_switch.value_on,caps_data->switch_value)) {
-        doRelayWrite(relayDevice,ENUM_VALVE2,1);
-    } else {
-        std::cerr << "unknown switch state " << caps_data->switch_value << "\n";
-    }
+    doRelayWrite(relayDevice, ENUM_ACID, 1);
+    TimerHelper(secs, StopAcid);
 }
 
-static void cap_switch_cmd_cb_v3(struct caps_switch_data *caps_data)
+void ManagePH(void)
 {
-    std::cerr << "v3 switch state " << caps_data->switch_value << "\n";
-    if (!strcmp(caps_helper_switch.attr_switch.value_off, caps_data->switch_value)) {
-        doRelayWrite(relayDevice,ENUM_VALVE3,0);
-    } else if (!strcmp(caps_helper_switch.attr_switch.value_on,caps_data->switch_value)) {
-        doRelayWrite(relayDevice,ENUM_VALVE3,1);
-    } else {
-        std::cerr << "unknown switch state " << caps_data->switch_value << "\n";
-    }
+    if (pH) {
+        cap_pH_init_cb(pH, NULL);
+
+        if (currentPH < 6.7) {
+            gc->SetGenPercent(101);
+        } else if (currentPH < 6.8) {
+            gc->SetGenPercent(80);
+        } else if (currentPH < 6.9) {
+            gc->SetGenPercent(60);
+        } else if (currentPH < 7.0) {
+            gc->SetGenPercent(40);
+        } else if (currentPH < 7.1) {
+            gc->SetGenPercent(20);
+        } else if (currentPH < 7.4) {
+            gc->SetGenPercent(0);
+        } else if (currentPH < 7.5) {
+            gc->SetGenPercent(0);
+            DeployAcid(1);
+        } else if (currentPH < 7.6) {
+            gc->SetGenPercent(0);
+            DeployAcid(2);
+        } else {
+            gc->SetGenPercent(0);
+            DeployAcid(3);
+        }
+    } 
 }
 
-static void cap_switch_cmd_cb_v4(struct caps_switch_data *caps_data)
+void UpdateChGenDisplay(void)
 {
-    std::cerr << "v4 switch state " << caps_data->switch_value << "\n";
-    if (!strcmp(caps_helper_switch.attr_switch.value_off, caps_data->switch_value)) {
-        doRelayWrite(relayDevice,ENUM_VALVE4,0);
-    } else if (strcmp(caps_helper_switch.attr_switch.value_on,caps_data->switch_value)) {
-        doRelayWrite(relayDevice,ENUM_VALVE4,1);
-    } else {
-        std::cerr << "unknown switch state " << caps_data->switch_value << "\n";
-    }
-}
+    int percent = gc->GetGenPercent();
+    std::cout << "Gen%: " << percent << "%, Status: " << 
+						gc->GetStatus() << "\n";
 
-static void cap_switch_cmd_cb_v5(struct caps_switch_data *caps_data)
-{
-    std::cerr << "v5 switch state " << caps_data->switch_value << "\n";
-    if (!strcmp(caps_helper_switch.attr_switch.value_off, caps_data->switch_value)) {
-        doRelayWrite(relayDevice,ENUM_VALVE5,0);
-    } else if (!strcmp(caps_helper_switch.attr_switch.value_on,caps_data->switch_value)) {
-        doRelayWrite(relayDevice,ENUM_VALVE5,1);
-    } else {
-        std::cerr << "unknown switch state " << caps_data->switch_value << "\n";
-    }
-}
+    if (percent) {
+        if (!ChGenWasOn) {
+//            chgen->set_switch_value(chgen, 
+//				caps_helper_switch.attr_switch.value_on);
+//            chgen->attr_switch_send(chgen);
+        }
+        ChGenWasOn = true;
+        if (percent != ChGenLastPercent) {
+            chgen_level->set_level_value(chgen_level, percent);
+            chgen_level->attr_level_send(chgen_level);
+        }
+        ChGenLastPercent = percent;
+        return;
+    } 
 
-void cap_switch_init_cb_v1(struct caps_switch_data *caps_data)
-{
-    caps_data->cmd_on_usr_cb = cap_switch_cmd_cb_v1;
-    caps_data->cmd_off_usr_cb = cap_switch_cmd_cb_v1;
-    if (doRelayRead(relayDevice,ENUM_VALVE1)) {
-        caps_data->set_switch_value(caps_data, 
-				caps_helper_switch.attr_switch.value_on);
-    } else {
-        caps_data->set_switch_value(caps_data, 
-				caps_helper_switch.attr_switch.value_off);
-    }
-}
+    if (ChGenWasOn) {
+//        chgen->set_switch_value(chgen, 
+//				caps_helper_switch.attr_switch.value_off);
+//        chgen->attr_switch_send(chgen);
 
-void cap_switch_init_cb_v2(struct caps_switch_data *caps_data)
-{
-    caps_data->cmd_on_usr_cb = cap_switch_cmd_cb_v2;
-    caps_data->cmd_off_usr_cb = cap_switch_cmd_cb_v2;
-    if (doRelayRead(relayDevice,ENUM_VALVE2)) {
-        caps_data->set_switch_value(caps_data, 
-				caps_helper_switch.attr_switch.value_on);
-    } else {
-        caps_data->set_switch_value(caps_data, 
-				caps_helper_switch.attr_switch.value_off);
-    }
-}
-
-void cap_switch_init_cb_v3(struct caps_switch_data *caps_data)
-{
-    caps_data->cmd_on_usr_cb = cap_switch_cmd_cb_v3;
-    caps_data->cmd_off_usr_cb = cap_switch_cmd_cb_v3;
-    if (doRelayRead(relayDevice,ENUM_VALVE3)) {
-        caps_data->set_switch_value(caps_data, 
-				caps_helper_switch.attr_switch.value_on);
-    } else {
-        caps_data->set_switch_value(caps_data, 
-				caps_helper_switch.attr_switch.value_off);
-    }
-}
-
-void cap_switch_init_cb_v4(struct caps_switch_data *caps_data)
-{
-    caps_data->cmd_on_usr_cb = cap_switch_cmd_cb_v4;
-    caps_data->cmd_off_usr_cb = cap_switch_cmd_cb_v4;
-    if (doRelayRead(relayDevice,ENUM_VALVE4)) {
-        caps_data->set_switch_value(caps_data, 
-				caps_helper_switch.attr_switch.value_on);
-    } else {
-        caps_data->set_switch_value(caps_data, 
-				caps_helper_switch.attr_switch.value_off);
-    }
-}
-
-void cap_switch_init_cb_v5(struct caps_switch_data *caps_data)
-{
-    caps_data->cmd_on_usr_cb = cap_switch_cmd_cb_v5;
-    caps_data->cmd_off_usr_cb = cap_switch_cmd_cb_v5;
-    if (doRelayRead(relayDevice,ENUM_VALVE5)) {
-        caps_data->set_switch_value(caps_data, 
-				caps_helper_switch.attr_switch.value_on);
-    } else {
-        caps_data->set_switch_value(caps_data, 
-				caps_helper_switch.attr_switch.value_off);
-    }
+        chgen_level->set_level_value(chgen_level, 0);
+        chgen_level->attr_level_send(chgen_level);
+    } 
+    ChGenWasOn = false;
+    ChGenLastPercent = 0;
 }
 
 void poll_sensors(union sigval timer_data)
@@ -672,6 +802,21 @@ void poll_sensors(union sigval timer_data)
 
     int pumpP = pc->GetPumpPercent();
     bool pumpOn = pumpP > 0;
+
+    if (pumpLastWatts != pc->GetPumpWatts()) {
+        pumpLastWatts = pc->GetPumpWatts();
+        pump_power->set_power_value(pump_power, pumpLastWatts);
+        pump_power->attr_power_send(pump_power);
+    }
+
+    if (!pc->CommState()) {
+        std::cerr << "pump communications down\n";
+        pumpOn = false;
+    }
+
+    if (!gc->CommState()) {
+        std::cerr << "chlorinator communications is down\n";
+    }
 
     if (tempCase && tempCase->handle) {
 	double valC, valF;
@@ -701,9 +846,6 @@ void poll_sensors(union sigval timer_data)
         }
     }
 
-// DEBUG
-//    cap_pH_init_cb(pH, NULL);
-
     if (!pumpOn) {
         if (pumpWasOn) {
             int32_t sequence_no = 1;
@@ -715,17 +857,17 @@ void poll_sensors(union sigval timer_data)
             pump_level->set_level_value(pump_level, 0);
             pump_level->attr_level_send(pump_level);
 
-            chgen->set_switch_value(chgen, 
-				caps_helper_switch.attr_switch.value_on);
-            chgen->attr_switch_send(chgen);
+//            chgen->set_switch_value(chgen, 
+//				caps_helper_switch.attr_switch.value_on);
+//            chgen->attr_switch_send(chgen);
         }
         pumpWasOn = false;
         pumpLastPercent = 0;
 
         if (ChGenWasOn) {
-            chgen->set_switch_value(chgen, 
-				caps_helper_switch.attr_switch.value_off);
-            chgen->attr_switch_send(chgen);
+//            chgen->set_switch_value(chgen, 
+//				caps_helper_switch.attr_switch.value_off);
+//            chgen->attr_switch_send(chgen);
 
             chgen_level->set_level_value(chgen_level, 0);
             chgen_level->attr_level_send(chgen_level);
@@ -748,12 +890,6 @@ void poll_sensors(union sigval timer_data)
     }
     pumpLastPercent = pumpP;
 
-    if (pumpLastWatts != pc->GetPumpWatts()) {
-        pump_power->set_power_value(pump_power, pumpLastWatts);
-        pump_power->attr_power_send(pump_power);
-    }
-    pumpLastWatts = pc->GetPumpWatts();
-
     double valC, valF;
     if (tempWater && tempWater->handle) {
 
@@ -766,9 +902,9 @@ void poll_sensors(union sigval timer_data)
 
     if (heaterUsing) {
         float heaterTemp = setTemp->get_heatingSetpoint_value(setTemp);
-        if (valF < heaterTemp) {
+        if (valF < (heaterTemp - 0.5) ) {
             doRelayWrite(relayDevice, ENUM_HEATER, 1);
-        } else if (valF > heaterTemp + 1.0) {
+        } else if (valF > heaterTemp) {
             doRelayWrite(relayDevice, ENUM_HEATER, 0);
             SetJacuzziReady();
         }
@@ -779,58 +915,16 @@ void poll_sensors(union sigval timer_data)
         int32_t sequence_no = 1;
 
         if (-1.0 != val) {
-            orp->set_voltage_value(orp, val);
-            orp->attr_voltage_send(orp);
+            orp->set_power_value(orp, val);
+            orp->attr_power_send(orp);
+//            orp->set_voltage_value(orp, val);
+//            orp->attr_voltage_send(orp);
         }
     }
 
-    if (pH) {
-        cap_pH_init_cb(pH, NULL);
+    ManagePH();
 
-        if (currentPH < 6.7) {
-            gc->SetGenPercent(101);
-        } else if (currentPH < 6.9) {
-            gc->SetGenPercent(80);
-        } else if (currentPH < 7.1) {
-            gc->SetGenPercent(60);
-        } else if (currentPH < 7.3) {
-            gc->SetGenPercent(40);
-        } else if (currentPH < 7.5) {
-            gc->SetGenPercent(20);
-        } else {
-            gc->SetGenPercent(0);
-        }
-    } 
-
-    int percent = gc->GetGenPercent();
-    std::cout << "Gen%: " << percent << "%, Status: " << 
-						gc->GetStatus() << "\n";
-
-    if (percent) {
-        if (!ChGenWasOn) {
-            chgen->set_switch_value(chgen, 
-				caps_helper_switch.attr_switch.value_on);
-            chgen->attr_switch_send(chgen);
-        }
-        ChGenWasOn = true;
-        if (percent != ChGenLastPercent) {
-            chgen_level->set_level_value(chgen_level, percent);
-            chgen_level->attr_level_send(chgen_level);
-        }
-        ChGenLastPercent = percent;
-        return;
-    } 
-
-    if (ChGenWasOn) {
-        chgen->set_switch_value(chgen, 
-				caps_helper_switch.attr_switch.value_off);
-        chgen->attr_switch_send(chgen);
-
-        chgen_level->set_level_value(chgen_level, 0);
-        chgen_level->attr_level_send(chgen_level);
-    } 
-    ChGenWasOn = false;
-    ChGenLastPercent = 0;
+    UpdateChGenDisplay();
 }
 
 int init_polling_thread()
@@ -883,22 +977,28 @@ void iot_caps_setup(IOT_CTX *ctx)
     if (ERROR == iot_err)
         std::cerr << "fail to setup relay board\n";
 
-    orp = caps_voltageMeasurement_initialize(ctx, "Water", 
-					(void*)cap_voltage_init_cb, NULL);
+//    orp = caps_voltageMeasurement_initialize(ctx, "Water", 
+    orp = caps_powerMeter_initialize(ctx, "Water", 
+					(void*)cap_voltage_init_cb_orp, NULL);
 
-    pH = st_cap_handle_init(ctx, "Water", "heartcircle52521.ph", 
+    pH = st_cap_handle_init(ctx, "Water", "pHMeasurement", 
 							cap_pH_init_cb, NULL);
 
     jacuzzi = caps_switch_initialize(ctx, "Jacuzzi", 
 				(void*)cap_switch_init_cb_jacuzzi, NULL);
 
-    jacuzziState = st_cap_handle_init(ctx, "Jacuzzi", 
-			"heartcircle52521.jacuzzistate", NULL, NULL);
+    fill = caps_valve_initialize(ctx, "Jacuzzi", 
+				(void*)cap_valve_init_cb_jacuzzi, NULL);
 
+//    jacuzziState = st_cap_handle_init(ctx, "Jacuzzi", 
+//			"heartcircle52521.jacuzzistate", NULL, NULL);
+
+#ifdef NOT
     chgen = caps_switch_initialize(ctx, "Chlorinator", 
 					(void*)cap_switch_init_cb_chgen, NULL);
     if (!chgen)
         std::cerr << "caps_switch_initialize failed for ChGen\n";
+#endif
 
     chgen_level = caps_switchLevel_initialize(ctx, "Chlorinator", 
 					(void*)cap_level_init_cb_chgen, NULL);
@@ -918,6 +1018,16 @@ void iot_caps_setup(IOT_CTX *ctx)
     pump_power = caps_powerMeter_initialize(ctx, "Pump", NULL, NULL);
     if (!pump_power)
         std::cerr << "caps_powerMeter_initialize failed for Pump\n";
+
+    cleaner = caps_switch_initialize(ctx, "Clean", 
+				(void*)cap_switch_init_cb_cleaner, NULL);
+    if (!cleaner)
+        std::cerr << "caps_switch_initialize failed for Cleaner\n";
+
+    vacuum = caps_switch_initialize(ctx, "Vacuum", 
+				(void*)cap_switch_init_cb_vacuum, NULL);
+    if (!vacuum)
+        std::cerr << "caps_switch_initialize failed for Vacuum\n";
 
     relHum = caps_relativeHumidityMeasurement_initialize(ctx, "Outside", 
 					(void*)cap_relHum_init_cb, NULL);
@@ -943,23 +1053,11 @@ void iot_caps_setup(IOT_CTX *ctx)
     blower = caps_switch_initialize(ctx, "Blower", 
 				(void*)cap_switch_init_cb_blower, NULL);
 
-    v1 = caps_switch_initialize(ctx, "Valve1", 
-					(void*)cap_switch_init_cb_v1, NULL);
+    ionizer = caps_voltageMeasurement_initialize(ctx, "Ionizer", 
+				(void*)cap_voltage_init_cb_ionizer, NULL);
 
-    v2 = caps_switch_initialize(ctx, "Valve2", 
-					(void*)cap_switch_init_cb_v2, NULL);
-
-    v3 = caps_switch_initialize(ctx, "Valve3", 
-					(void*)cap_switch_init_cb_v3, NULL);
-
-    v4 = caps_switch_initialize(ctx, "Valve4", 
-					(void*)cap_switch_init_cb_v4, NULL);
-
-    v5 = caps_switch_initialize(ctx, "Valve5", 
-					(void*)cap_switch_init_cb_v5, NULL);
-
-    gc = new ChGenController();
     pc = new PumpController();
+    gc = new ChGenController();
 
     init_polling_thread();
 }

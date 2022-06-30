@@ -36,8 +36,9 @@ public:
     int SendPacket(const unsigned char *packet, int len, int interval_secs);
     int GenerateCSC(unsigned char *packet, int len);
     virtual int ProcessPacket(const unsigned char *packet, int len) = 0;
+    virtual const char *Name(void) = 0;
 
-    bool CommState();
+    bool CommState() {return commState;};
 };
 
 #endif // HAYWARD_CONTROLLER_HPP
